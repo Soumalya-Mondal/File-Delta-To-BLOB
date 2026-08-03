@@ -3,6 +3,8 @@ if __name__ == '__main__':
     # Importing Python Module:S1
     try:
         from pathlib import Path
+        import sqlite3
+        import hashlib
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S1] - {str(error)}')
 
@@ -11,8 +13,72 @@ if __name__ == '__main__':
         parent_folder_path = Path.cwd()
         env_file_path = Path(parent_folder_path) / '.env'
         file_upload_folder_path = Path(parent_folder_path) / 'FileUpload'
+        file_upload_folder_path.mkdir(parents = True, exist_ok = True)
         file_download_folder_path = Path(parent_folder_path) / 'FileDownload'
+        file_download_folder_path.mkdir(parents = True, exist_ok = True)
         database_folder_path = Path(parent_folder_path) / 'database'
+        database_folder_path.mkdir(parents = True, exist_ok = True)
         analysis_engine_folder_path = Path('/home/soumalya/Desktop/Office-Work/Analytics-Engine')
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S2] - {str(error)}')
+
+    # Create Analysis File Hash Database:S3
+    try:
+        database_file_path = Path(database_folder_path) / 'AnalysisFileHash.db'
+        database_connection = sqlite3.connect(str(database_file_path))
+        database_connection.close()
+        print(f'INFO - Analysis File Hash Database Created At: {database_file_path}')
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S3] - {str(error)}')
+
+    # Create Analysis File Hash Table:S4
+    try:
+        if database_file_path.exists():
+            database_connection = sqlite3.connect(str(database_file_path))
+            database_cursor = database_connection.cursor()
+            database_cursor.execute('''
+                CREATE TABLE IF NOT EXISTS analysis_file_hash (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_path TEXT UNIQUE,
+                    file_md5_hash TEXT UNIQUE
+                )
+            ''')
+            database_connection.commit()
+            database_connection.close()
+            print(f'INFO - Analysis File Hash Table Verified In Database')
+        else:
+            print(f'ERROR - [File-Delta-To-BLOB:S4] - Analysis File Hash Database File Not Found')
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S4] - {str(error)}')
+
+    # Collect All Files From Analysis Engine:S5
+    try:
+        analysis_engine_files_path_list = []
+        exclude_folder_list = ['node_modules', '__pycache__', '.git', '.venv']
+        exclude_file_list = ['package-lock.json', '.gitattributes', '.gitignore', '.python-version', '.env', 'uv.lock']
+        if analysis_engine_folder_path.exists() and analysis_engine_folder_path.is_dir():
+            for file_path in analysis_engine_folder_path.rglob('*'):
+                if any(exclude_folder in file_path.parts for exclude_folder in exclude_folder_list):
+                    continue
+                if file_path.is_file() and file_path.name in exclude_file_list:
+                    continue
+                if file_path.is_file():
+                    analysis_engine_files_path_list.append(file_path)
+            print(f'INFO - Total Files Collected From Analysis Engine: {len(analysis_engine_files_path_list)}')
+        else:
+            print(f'ERROR - [File-Delta-To-BLOB:S5] - Analysis Engine Folder Does Not Exist Or Is Not Directory')
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S5] - {str(error)}')
+
+    # Calculate MD5 Hash For All Collected Files:S6
+    try:
+        analysis_engine_files_md5_dict = {}
+        for file_path in analysis_engine_files_path_list:
+            md5_hash = hashlib.md5()
+            with open(file_path, 'rb') as file:
+                while chunk := file.read(4 * 1024 * 1024):
+                    md5_hash.update(chunk)
+            analysis_engine_files_md5_dict[file_path] = md5_hash.hexdigest()
+        print(f'INFO - Total MD5 Hashes Calculated: {len(analysis_engine_files_md5_dict)}')
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S6] - {str(error)}')
