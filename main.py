@@ -62,7 +62,11 @@ if __name__ == '__main__':
     # If User Choose Option-B As Upload Files Delta:S7
     elif user_choice == 'B':
         try:
-            print(upload_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))
+            print('')
+            print('~' * 25, ' Upload Files Delta ', '~' * 25)
+            upload_files_result = upload_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path), files_upload_folder_path = str(files_upload_folder_path))
+            print(f'{"[" + str(upload_files_result.get("status")) + "]":<10} {str(upload_files_result.get("message"))}')
+            print('~' * 84)
         except Exception as error:
             print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S7] - {str(error)}')
 
