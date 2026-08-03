@@ -5,6 +5,7 @@ if __name__ == '__main__':
         from pathlib import Path
         import sqlite3
         import hashlib
+        from datetime import datetime
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S1] - {str(error)}')
 
@@ -39,8 +40,10 @@ if __name__ == '__main__':
             database_cursor.execute('''
                 CREATE TABLE IF NOT EXISTS analysis_file_hash (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    file_path TEXT UNIQUE,
-                    file_md5_hash TEXT UNIQUE
+                    file_uploaded_at DATETIME NOT NULL,
+                    file_path TEXT UNIQUE NOT NULL,
+                    file_md5_hash TEXT NOT NULL,
+                    file_updated_at DATETIME NOT NULL
                 )
             ''')
             database_connection.commit()
@@ -82,3 +85,23 @@ if __name__ == '__main__':
         print(f'INFO - Total MD5 Hashes Calculated: {len(analysis_engine_files_md5_dict)}')
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S6] - {str(error)}')
+
+    # Insert MD5 Hashes Into Database:S7
+    try:
+        database_connection = sqlite3.connect(str(database_file_path))
+        database_cursor = database_connection.cursor()
+        total_inserted = 0
+        for file_path, file_md5_hash in analysis_engine_files_md5_dict.items():
+            try:
+                database_cursor.execute('''
+                    INSERT INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_updated_at)
+                    VALUES (?, ?, ?, ?)
+                ''', (datetime.now().isoformat(), str(file_path), file_md5_hash, datetime.now().isoformat()))
+                total_inserted += 1
+            except sqlite3.IntegrityError as integrity_error:
+                print(f'WARNING - [File-Delta-To-BLOB:S7] - Duplicate Entry Skipped For File: {file_path}')
+        database_connection.commit()
+        database_connection.close()
+        print(f'INFO - Total Records Inserted Into Database: {total_inserted}')
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S7] - {str(error)}')
