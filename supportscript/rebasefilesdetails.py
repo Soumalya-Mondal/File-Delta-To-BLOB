@@ -7,6 +7,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
         import hashlib
         import json
         from datetime import datetime
+        from supportscript.fileuploadtoblob import file_upload_to_blob
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '1', 'message': str(error)}
 
@@ -120,4 +121,13 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '8', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Rebase-Files-Details', 'step': '8', 'message': 'Rebase completed successfully'}
+    # Upload File Hash Details JSON To Azure BLOB:S9
+    try:
+        file_upload_result = file_upload_to_blob(str(env_file_path), str(json_dump_file_path_object))
+        if file_upload_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': str(file_upload_result)}
+        print(f'INFO - File Hash Details JSON Uploaded To Azure BLOB: {json_dump_file_path_object}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': 'Rebase completed successfully'}

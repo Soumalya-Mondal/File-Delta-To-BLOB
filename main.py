@@ -2,11 +2,26 @@
 if __name__ == '__main__':
     # Importing Python Module:S1
     try:
+        import sys
         from pathlib import Path
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S1] - {str(error)}')
 
-    # Define Folder Path:S2
+    # Appending System Path:S2
+    try:
+        sys.path.append(str(Path.cwd()))
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S2] - {str(error)}')
+
+    # Importing User Define Function:S3
+    try:
+        from supportscript.rebasefilesdetails import rebase_files_details
+        from supportscript.uploadfilesdelta import upload_files_delta
+        from supportscript.downloadfilesdelta import download_files_delta
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S3] - {str(error)}')
+
+    # Define Folder Path:S4
     try:
         parent_folder_path = Path.cwd()
         env_file_path = Path(parent_folder_path) / '.env'
@@ -16,7 +31,38 @@ if __name__ == '__main__':
         file_hash_details_json_path = Path(parent_folder_path) / 'FileHashDetails.json'
         analysis_engine_folder_path = Path('/home/soumalya/Desktop/Office-Work/Analytics-Engine')
     except Exception as error:
-        print(f'ERROR - [File-Delta-To-BLOB:S2] - {str(error)}')
+        print(f'ERROR - [File-Delta-To-BLOB:S4] - {str(error)}')
 
-    # from supportscript.rebasefilesdetails import rebase_files_details
-    # print(rebase_files_details(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))
+    # Calling Operation Menu:S5
+    try:
+        print('[A] -> Rebase Files Details')
+        print('[B] -> Upload Files Delta')
+        print('[C] -> Download Files Delta')
+        user_choice = input('Please Enter Your Choice: ').strip().upper()
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S5] - {str(error)}')
+
+    # If User Choose Option-A As File Rebase:S6
+    if user_choice == 'A':
+        try:
+            print(rebase_files_details(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))
+        except Exception as error:
+            print(f'ERROR - [File-Delta-To-BLOB:S6] - {str(error)}')
+
+    # If User Choose Option-B As Upload Files Delta:S7
+    elif user_choice == 'B':
+        try:
+            print(upload_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))
+        except Exception as error:
+            print(f'ERROR - [File-Delta-To-BLOB:S7] - {str(error)}')
+
+    # If User Choose Option-C As Download Files Delta:S8
+    elif user_choice == 'C':
+        try:
+            print(download_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))
+        except Exception as error:
+            print(f'ERROR - [File-Delta-To-BLOB:S8] - {str(error)}')
+
+    # If User Choose Invalid Option:S9
+    else:
+        print('WARNING - [File-Delta-To-BLOB:S9] - Invalid Choice. Please enter A, B, or C.')

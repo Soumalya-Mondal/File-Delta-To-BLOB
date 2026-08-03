@@ -78,4 +78,13 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '8', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'File-Upload-To-BLOB', 'step': '8', 'message': 'File Uploaded And Verified Successfully'}
+    # Create Directories In Azure BLOB Container:S9
+    try:
+        for directory_name in ['FileDownload', 'FileUpload']:
+            directory_blob_client = blob_container_client.get_blob_client(f'{directory_name}/')
+            directory_blob_client.upload_blob(b'', overwrite = True)
+            print(f'INFO - Directory Created In Azure BLOB Container: {directory_name}/')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '9', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'File-Upload-To-BLOB', 'step': '9', 'message': 'File Uploaded And Verified Successfully'}
