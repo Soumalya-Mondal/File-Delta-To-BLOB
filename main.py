@@ -5,6 +5,7 @@ if __name__ == '__main__':
         from pathlib import Path
         import sqlite3
         import hashlib
+        import json
         from datetime import datetime
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S1] - {str(error)}')
@@ -19,6 +20,7 @@ if __name__ == '__main__':
         file_download_folder_path.mkdir(parents = True, exist_ok = True)
         database_folder_path = Path(parent_folder_path) / 'database'
         database_folder_path.mkdir(parents = True, exist_ok = True)
+        file_hash_details_json_path = Path(parent_folder_path) / 'FileHashDetails.json'
         analysis_engine_folder_path = Path('/home/soumalya/Desktop/Office-Work/Analytics-Engine')
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S2] - {str(error)}')
@@ -75,14 +77,18 @@ if __name__ == '__main__':
 
     # Calculate MD5 Hash For All Collected Files:S6
     try:
-        analysis_engine_files_md5_dict = {}
+        file_hash_details_dict = {}
         for file_path in analysis_engine_files_path_list:
             md5_hash = hashlib.md5()
             with open(file_path, 'rb') as file:
                 while chunk := file.read(4 * 1024 * 1024):
                     md5_hash.update(chunk)
-            analysis_engine_files_md5_dict[file_path] = md5_hash.hexdigest()
-        print(f'INFO - Total MD5 Hashes Calculated: {len(analysis_engine_files_md5_dict)}')
+            file_hash_details_dict[str(file_path.relative_to(analysis_engine_folder_path))] = {
+                'file_hash_value': md5_hash.hexdigest(),
+                'file_uploaded_at': (timestamp := datetime.now().isoformat()),
+                'file_updated_at': timestamp
+            }
+        print(f'INFO - Total MD5 Hashes Calculated: {len(file_hash_details_dict)}')
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S6] - {str(error)}')
 
@@ -91,12 +97,12 @@ if __name__ == '__main__':
         database_connection = sqlite3.connect(str(database_file_path))
         database_cursor = database_connection.cursor()
         total_inserted = 0
-        for file_path, file_md5_hash in analysis_engine_files_md5_dict.items():
+        for file_path, file_hash_details in file_hash_details_dict.items():
             try:
                 database_cursor.execute('''
                     INSERT INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_updated_at)
                     VALUES (?, ?, ?, ?)
-                ''', (datetime.now().isoformat(), str(file_path), file_md5_hash, datetime.now().isoformat()))
+                ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_updated_at']))
                 total_inserted += 1
             except sqlite3.IntegrityError as integrity_error:
                 print(f'WARNING - [File-Delta-To-BLOB:S7] - Duplicate Entry Skipped For File: {file_path}')
@@ -105,3 +111,11 @@ if __name__ == '__main__':
         print(f'INFO - Total Records Inserted Into Database: {total_inserted}')
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S7] - {str(error)}')
+
+    # Create File Hash Details JSON:S8
+    try:
+        with open(file_hash_details_json_path, 'w', encoding = 'utf-8') as json_file:
+            json.dump(file_hash_details_dict, json_file, indent = 2)
+        print(f'INFO - File Hash Details JSON Created At: {file_hash_details_json_path}')
+    except Exception as error:
+        print(f'ERROR - [File-Delta-To-BLOB:S8] - {str(error)}')
