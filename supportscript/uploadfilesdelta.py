@@ -41,11 +41,20 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     try:
         database_connection = sqlite3.connect(str(database_file_object))
         database_cursor = database_connection.cursor()
-        database_cursor.execute('SELECT file_path, file_md5_hash FROM analysis_file_hash')
-        database_file_hash_details_dict = {row[0]: row[1] for row in database_cursor.fetchall()}
+        database_cursor.execute('SELECT file_path, file_md5_hash, file_size_in_bytes, file_uploaded_at, file_updated_at, file_status FROM analysis_file_hash')
+        database_file_full_details_dict = {
+            row[0]: {
+                'file_hash_value': row[1],
+                'file_size_in_bytes': row[2],
+                'file_uploaded_at': row[3],
+                'file_updated_at': row[4],
+                'file_status': row[5]
+            }
+            for row in database_cursor.fetchall()
+        }
         database_connection.close()
         print(f'{"[INFO]":<10} Analysis File Hash Database Connected At: "{database_file_object.name}"')
-        print(f'{"[INFO]":<10} Total File Hash Records Fetched: {len(database_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total File Hash Records Fetched: {len(database_file_full_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '4', 'message': str(error)}
 
@@ -61,6 +70,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
 
     # Compare Database And JSON File Hashes:S6
     try:
+        database_file_hash_details_dict = {file_path: file_details['file_hash_value'] for file_path, file_details in database_file_full_details_dict.items()}
         if database_file_hash_details_dict == json_file_hash_details_dict:
             final_file_hash_details_dict = database_file_hash_details_dict.copy()
             print(f'{"[INFO]":<10} Database And JSON File Hashes Matched Perfectly')
@@ -108,56 +118,145 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': str(error)}
 
-    # Compare Current File Hashes With Final File Hashes And Build Delta:S9
+    # Identify Added Files From Current File Hashes:S9
     try:
-        delta_file_hash_details_dict = {}
+        added_file_hash_details_dict = {}
         for file_path, file_details in current_file_hash_details_dict.items():
-            final_file_hash = final_file_hash_details_dict.get(file_path)
-            if final_file_hash is None or file_details.get('file_hash_value') != final_file_hash:
-                delta_file_hash_details_dict[file_path] = file_details
-        print(f'{"[INFO]":<10} Total Delta File Hash Records Identified: {len(delta_file_hash_details_dict)}')
+            if file_path not in final_file_hash_details_dict:
+                added_file_hash_details_dict[file_path] = {
+                    'file_hash_value': file_details['file_hash_value'],
+                    'file_size_in_bytes': file_details['file_size_in_bytes'],
+                    'file_uploaded_at': file_details['file_uploaded_at'],
+                    'file_updated_at': file_details['file_updated_at'],
+                    'file_status': 'Added'
+                }
+        print(f'{"[INFO]":<10} Total Added File Hash Records Identified: {len(added_file_hash_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '9', 'message': str(error)}
 
-    # Copy Delta Files To FilesUpload Folder:S10
+    # Identify Modified Files From Current File Hashes:S10
     try:
-        delta_files_copied_count = 0
-        for relative_file_path in delta_file_hash_details_dict:
-            destination_file_path_object = files_upload_folder_path_object / relative_file_path
-            destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
-            shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
-            delta_files_copied_count += 1
-        print(f'{"[INFO]":<10} Total Delta Files Copied To Upload Folder: {delta_files_copied_count}')
+        modified_file_hash_details_dict = {}
+        for file_path, file_details in current_file_hash_details_dict.items():
+            final_file_hash = final_file_hash_details_dict.get(file_path)
+            if final_file_hash is not None and file_details.get('file_hash_value') != final_file_hash:
+                modified_file_hash_details_dict[file_path] = {
+                    'file_hash_value': file_details['file_hash_value'],
+                    'file_size_in_bytes': file_details['file_size_in_bytes'],
+                    'file_uploaded_at': file_details['file_uploaded_at'],
+                    'file_updated_at': file_details['file_updated_at'],
+                    'file_status': 'Modified'
+                }
+        print(f'{"[INFO]":<10} Total Modified File Hash Records Identified: {len(modified_file_hash_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '10', 'message': str(error)}
 
-    # Insert Or Update Delta File Details Into Database:S11
+    # Identify Deleted Files From Final File Hashes:S11
     try:
-        database_connection = sqlite3.connect(str(database_file_object))
-        database_cursor = database_connection.cursor()
-        total_upserted = 0
-        for file_path, file_hash_details in delta_file_hash_details_dict.items():
-            database_cursor.execute('''
-                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_updated_at)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_updated_at']))
-            total_upserted += 1
-        database_connection.commit()
-        database_connection.close()
-        print(f'{"[INFO]":<10} Total Delta File Details Upserted Into Database: {total_upserted}')
+        deleted_file_hash_details_dict = {}
+        for file_path in final_file_hash_details_dict:
+            if file_path not in current_file_hash_details_dict:
+                old_file_details = database_file_full_details_dict.get(file_path, {})
+                deleted_file_hash_details_dict[file_path] = {
+                    'file_hash_value': old_file_details.get('file_hash_value', 'unknown'),
+                    'file_size_in_bytes': old_file_details.get('file_size_in_bytes', 0),
+                    'file_status': 'Deleted',
+                    'file_uploaded_at': old_file_details.get('file_uploaded_at', datetime.now().isoformat()),
+                    'file_updated_at': datetime.now().isoformat()
+                }
+        print(f'{"[INFO]":<10} Total Deleted File Hash Records Identified: {len(deleted_file_hash_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '11', 'message': str(error)}
 
-    # Update JSON Dump File With Delta File Details:S12
+    # Copy Added Files To FilesUpload Folder:S12
     try:
-        with open(json_dump_file_object, 'r', encoding = 'utf-8') as json_file:
-            json_dump_data = json.load(json_file)
-        json_dump_data.update(delta_file_hash_details_dict)
-        with open(json_dump_file_object, 'w', encoding = 'utf-8') as json_file:
-            json.dump(json_dump_data, json_file, indent = 2)
-        print(f'{"[INFO]":<10} JSON Dump File Updated With Delta File Details: "{json_dump_file_object.name}"')
-        print(f'{"[INFO]":<10} Total Delta File Details Updated In JSON Dump File: {len(delta_file_hash_details_dict)}')
+        added_files_copied_count = 0
+        for relative_file_path in added_file_hash_details_dict:
+            destination_file_path_object = files_upload_folder_path_object / relative_file_path
+            destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
+            shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
+            added_files_copied_count += 1
+        print(f'{"[INFO]":<10} Total Added Files Copied To Upload Folder: {added_files_copied_count}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '12', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '12', 'message': 'Upload files delta completed successfully'}
+    # Copy Modified Files To FilesUpload Folder:S13
+    try:
+        modified_files_copied_count = 0
+        for relative_file_path in modified_file_hash_details_dict:
+            destination_file_path_object = files_upload_folder_path_object / relative_file_path
+            destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
+            shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
+            modified_files_copied_count += 1
+        print(f'{"[INFO]":<10} Total Modified Files Copied To Upload Folder: {modified_files_copied_count}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '13', 'message': str(error)}
+
+    # Insert Or Update Added File Details Into Database:S14
+    try:
+        database_connection = sqlite3.connect(str(database_file_object))
+        database_cursor = database_connection.cursor()
+        total_added_upserted = 0
+        for file_path, file_hash_details in added_file_hash_details_dict.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_added_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Added File Details Upserted Into Database: {total_added_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '14', 'message': str(error)}
+
+    # Insert Or Update Modified File Details Into Database:S15
+    try:
+        database_connection = sqlite3.connect(str(database_file_object))
+        database_cursor = database_connection.cursor()
+        total_modified_upserted = 0
+        for file_path, file_hash_details in modified_file_hash_details_dict.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_modified_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Modified File Details Upserted Into Database: {total_modified_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '15', 'message': str(error)}
+
+    # Insert Or Update Deleted File Details Into Database:S16
+    try:
+        database_connection = sqlite3.connect(str(database_file_object))
+        database_cursor = database_connection.cursor()
+        total_deleted_upserted = 0
+        for file_path, file_hash_details in deleted_file_hash_details_dict.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_deleted_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Deleted File Details Upserted Into Database: {total_deleted_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '16', 'message': str(error)}
+
+    # Update JSON Dump File With Added, Modified And Deleted File Details:S17
+    try:
+        with open(json_dump_file_object, 'r', encoding = 'utf-8') as json_file:
+            json_dump_data = json.load(json_file)
+        json_dump_data.update(added_file_hash_details_dict)
+        json_dump_data.update(modified_file_hash_details_dict)
+        json_dump_data.update(deleted_file_hash_details_dict)
+        with open(json_dump_file_object, 'w', encoding = 'utf-8') as json_file:
+            json.dump(json_dump_data, json_file, indent = 2)
+        print(f'{"[INFO]":<10} JSON Dump File Updated With Added, Modified And Deleted File Details: "{json_dump_file_object.name}"')
+        print(f'{"[INFO]":<10} Total Added File Details Updated In JSON Dump File: {len(added_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(deleted_file_hash_details_dict)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '17', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '17', 'message': 'Upload files delta completed successfully'}
