@@ -14,7 +14,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
     try:
         upload_file_path_object = Path(upload_file_path)
         if upload_file_path_object.exists() and upload_file_path_object.is_file():
-            print('INFO - File Exists And Is A File')
+            print(f'{"[INFO]":<10} File Exists And Is A File')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '2', 'message': str(error)}
 
@@ -25,8 +25,8 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
         upload_file_hash_value = md5_hash.hexdigest()
         upload_file_hash_bytes = md5_hash.digest()
         upload_file_size = upload_file_path_object.stat().st_size
-        print(f'INFO - File MD5 Hash Calculated: {upload_file_hash_value}')
-        print(f'INFO - File Size Calculated: {upload_file_size} bytes')
+        print(f'{"[INFO]":<10} File MD5 Hash Calculated: {upload_file_hash_value}')
+        print(f'{"[INFO]":<10} File Size Calculated: {upload_file_size} bytes')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '3', 'message': str(error)}
 
@@ -34,7 +34,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
     try:
         if Path(env_file_path).exists() and Path(env_file_path).is_file():
             load_dotenv(dotenv_path = Path(env_file_path))
-            print(f'INFO - Environment File Loaded: {env_file_path}')
+            print(f'{"[INFO]":<10} Environment File Loaded')
         else:
             return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '4', 'message': 'Environment File Not Found'}
     except Exception as error:
@@ -51,7 +51,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
     try:
         for blob_file_path in blob_container_client.list_blobs():
             blob_container_client.delete_blob(blob_file_path.name)
-        print('INFO - All Existing BLOBs Deleted From Container')
+        print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '6', 'message': str(error)}
 
@@ -64,7 +64,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
                 overwrite = True,
                 content_settings = ContentSettings(content_md5 = upload_file_hash_bytes) #type: ignore
             )
-        print(f'INFO - File Uploaded To BLOB: {upload_file_path_object.name}')
+        print(f'{"[INFO]":<10} File Uploaded To BLOB: "{upload_file_path_object.name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '7', 'message': str(error)}
 
@@ -72,7 +72,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
     try:
         blob_properties = upload_file_blob_client.get_blob_properties()
         if (upload_file_size == blob_properties.size) and (upload_file_hash_bytes == blob_properties.content_settings.content_md5):
-            print('INFO - Uploaded File Size And MD5 Verified Successfully')
+            print(f'{"[INFO]":<10} Uploaded File Size And MD5 Verified Successfully')
         else:
             return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '8', 'message': 'Uploaded File Size Or MD5 Verification Failed'}
     except Exception as error:
@@ -83,7 +83,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
         for directory_name in ['FileDownload', 'FileUpload']:
             directory_blob_client = blob_container_client.get_blob_client(f'{directory_name}/')
             directory_blob_client.upload_blob(b'', overwrite = True)
-            print(f'INFO - Directory Created In Azure BLOB Container: {directory_name}/')
+            print(f'{"[INFO]":<10} Directory Created In Azure BLOB Container: "{directory_name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '9', 'message': str(error)}
 
