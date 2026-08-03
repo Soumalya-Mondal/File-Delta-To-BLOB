@@ -18,3 +18,5 @@ if __name__ == '__main__':
     except Exception as error:
         print(f'ERROR - [File-Delta-To-BLOB:S2] - {str(error)}')
 
+    # from supportscript.rebasefilesdetails import rebase_files_details
+    # print(rebase_files_details(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))

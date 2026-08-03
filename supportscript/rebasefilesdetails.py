@@ -42,6 +42,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
                     file_uploaded_at DATETIME NOT NULL,
                     file_path TEXT UNIQUE NOT NULL,
                     file_md5_hash TEXT NOT NULL,
+                    file_size_in_bytes BIGINT NOT NULL,
                     file_updated_at DATETIME NOT NULL
                 )
             ''')
@@ -83,6 +84,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
                     md5_hash.update(chunk)
             file_hash_details_dict[str(file_path.relative_to(analysis_engine_folder_path_object))] = {
                 'file_hash_value': md5_hash.hexdigest(),
+                'file_size_in_bytes': file_path.stat().st_size,
                 'file_uploaded_at': (timestamp := datetime.now().isoformat()),
                 'file_updated_at': timestamp
             }
@@ -98,9 +100,9 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
         for file_path, file_hash_details in file_hash_details_dict.items():
             try:
                 database_cursor.execute('''
-                    INSERT INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_updated_at)
-                    VALUES (?, ?, ?, ?)
-                ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_updated_at']))
+                    INSERT INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_updated_at']))
                 total_inserted += 1
             except sqlite3.IntegrityError as integrity_error:
                 print(f'WARNING - [Rebase-Files-Details:S7] - Duplicate Entry Skipped For File: {file_path}')
