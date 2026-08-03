@@ -9,6 +9,7 @@ if __name__ == '__main__':
     # Define Folder Path:S2
     try:
         parent_folder_path = Path.cwd()
+        env_file_path = Path(parent_folder_path) / '.env'
         database_folder_path = Path(parent_folder_path) / 'database'
         database_folder_path.mkdir(parents = True, exist_ok = True)
         database_file_path = Path(database_folder_path) / 'AnalysisFileHash.db'

@@ -5,5 +5,6 @@ description = "File Delta Upload To Azure BLOB And Download From The BLOB"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "azure-storage-blob>=12.30.0",
     "python-dotenv>=1.2.2",
 ]

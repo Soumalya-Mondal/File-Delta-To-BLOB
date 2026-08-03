@@ -1,5 +1,5 @@
 # Define "rebase_files_details" function
-def rebase_files_details(database_file_path: str, json_dump_file_path: str, analysis_engine_folder_path: str) -> dict[str, str]: #type: ignore
+def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_file_path: str, analysis_engine_folder_path: str) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
