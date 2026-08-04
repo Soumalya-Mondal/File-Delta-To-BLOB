@@ -1,5 +1,5 @@
 # Define "file_download_from_blob" Function
-def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: str, file_hash_download: bool = Flase) -> dict[str, str]: #type: ignore
+def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: str, file_hash_download: bool = False) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
@@ -14,10 +14,10 @@ def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: s
     try:
         files_delta_store_folder_path_object = Path(files_delta_store_folder_path)
         if files_delta_store_folder_path_object.exists() and files_delta_store_folder_path_object.is_dir():
-            print(f'{"[INFO]":<10} Folder Exists: "{files_delta_store_folder_path}"')
+            print(f'{"[INFO]":<10} Folder Exists: "{files_delta_store_folder_path_object.name}"')
         else:
             files_delta_store_folder_path_object.mkdir(parents=True, exist_ok=True)
-            print(f'{"[INFO]":<10} Folder Created: "{files_delta_store_folder_path}"')
+            print(f'{"[INFO]":<10} Folder Created: "{files_delta_store_folder_path_object.name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Download-From-BLOB', 'step': '2', 'message': str(error)}
 
@@ -79,7 +79,9 @@ def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: s
                 local_file_data.write(blob_container_client.get_blob_client(blob_name).download_blob().readall())
             blob_properties = blob_container_client.get_blob_client(blob_name).get_blob_properties()
             blob_file_dict[str(local_file_path)] = blob_properties.content_settings.content_md5
-            print(f'{"[INFO]":<10} File Downloaded From BLOB: "{blob_name}" -> "{local_file_path}"')
+            local_file_relative_path = local_file_path.relative_to(files_delta_store_folder_path_object).as_posix()
+            local_file_display_path = f'{files_delta_store_folder_path_object.name}/{local_file_relative_path}'
+            print(f'{"[INFO]":<10} File Downloaded From BLOB: "{blob_name}" -> "{local_file_display_path}"')
         print(f'{"[INFO]":<10} Total Files Downloaded: {len(blob_file_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Download-From-BLOB', 'step': '7', 'message': str(error)}

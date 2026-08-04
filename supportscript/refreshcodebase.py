@@ -6,7 +6,7 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
         import shutil
         from supportscript.localfiledetailsupdate import local_file_details_update
         from supportscript.fileuploadtoblob import file_upload_to_blob
-        from supportscript.filedownloadfromblob import file_download_from_blob
+        from supportscript.filedetailscompare import file_details_compare
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '1', 'message': str(error)}
 
@@ -36,52 +36,52 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '3', 'message': str(error)}
 
-    # Update Local File Details:S4
+    # Compare File Details With BLOB:S4
     try:
-        local_update_result = local_file_details_update(
-            database_file_path = database_file_path,
-            json_dump_file_path = json_dump_file_path,
-            analysis_engine_folder_path = analysis_engine_folder_path,
-            files_delta_store_folder_path = files_delta_store_folder_path
+        file_details_compare_result = file_details_compare(
+            env_file_path = env_file_path,
+            files_delta_store_folder_path = files_delta_store_folder_path,
+            json_dump_file_path = json_dump_file_path
         )
-        if local_update_result.get('status') != 'SUCCESS':
-            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '4', 'message': f'Failed To Update Local File Details: {local_update_result.get("message")}'}
-        files_to_upload_list = local_update_result.get('files_to_upload_list', [])
-        print(f'{"[INFO]":<10} Local File Details Updated')
+        if file_details_compare_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '4', 'message': f'Failed To Compare File Details: {file_details_compare_result.get("message")}'}
+        print(f'{"[INFO]":<10} File Details Compared Successfully')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '4', 'message': str(error)}
 
-    # Download File Hash Details From Azure BLOB Container:S5
-    try:
-        download_result = file_download_from_blob(
-            env_file_path = env_file_path,
-            files_delta_store_folder_path = files_delta_store_folder_path,
-            file_hash_download = True
-        )
-        if download_result.get('status') != 'SUCCESS':
-            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '5', 'message': f'Failed To Download File Hash Details From Azure BLOB: {download_result.get("message")}'}
-        print(f'{"[INFO]":<10} File Hash Details Downloaded From Azure BLOB')
-    except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '5', 'message': str(error)}
+    # # Update Local File Details:S5
+    # try:
+    #     local_update_result = local_file_details_update(
+    #         database_file_path = database_file_path,
+    #         json_dump_file_path = json_dump_file_path,
+    #         analysis_engine_folder_path = analysis_engine_folder_path,
+    #         files_delta_store_folder_path = files_delta_store_folder_path
+    #     )
+    #     if local_update_result.get('status') != 'SUCCESS':
+    #         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '5', 'message': f'Failed To Update Local File Details: {local_update_result.get("message")}'}
+    #     files_to_upload_list = local_update_result.get('files_to_upload_list', [])
+    #     print(f'{"[INFO]":<10} Local File Details Updated')
+    # except Exception as error:
+    #     return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '5', 'message': str(error)}
 
-    # Upload Files To Azure BLOB Container:S6
-    try:
-        print(f'{"[INFO]":<10} Total Files Ready For Upload To Azure BLOB: {len(files_to_upload_list)}')
-        for upload_file_path in files_to_upload_list:
-            upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = upload_file_path)
-            if upload_result.get('status') != 'SUCCESS':
-                return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '6', 'message': f'Failed To Upload File "{upload_file_path}": {upload_result.get("message")}'}
-        print(f'{"[INFO]":<10} Total Files Uploaded To Azure BLOB: {len(files_to_upload_list)}')
-    except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '6', 'message': str(error)}
+    # # Upload Files To Azure BLOB Container:S6
+    # try:
+    #     print(f'{"[INFO]":<10} Total Files Ready For Upload To Azure BLOB: {len(files_to_upload_list)}')
+    #     for upload_file_path in files_to_upload_list:
+    #         upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = upload_file_path)
+    #         if upload_result.get('status') != 'SUCCESS':
+    #             return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '6', 'message': f'Failed To Upload File "{upload_file_path}": {upload_result.get("message")}'}
+    #     print(f'{"[INFO]":<10} Total Files Uploaded To Azure BLOB: {len(files_to_upload_list)}')
+    # except Exception as error:
+    #     return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '6', 'message': str(error)}
 
-    # Upload JSON Dump File To Azure BLOB Container:S7
-    try:
-        json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path)
-        if json_upload_result.get('status') != 'SUCCESS':
-            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': f'Failed To Upload JSON Dump File: {json_upload_result.get("message")}'}
-        print(f'{"[INFO]":<10} JSON Dump File Uploaded To Azure BLOB: "{Path(json_dump_file_path).name}"')
-    except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': str(error)}
+    # # Upload JSON Dump File To Azure BLOB Container:S7
+    # try:
+    #     json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path)
+    #     if json_upload_result.get('status') != 'SUCCESS':
+    #         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': f'Failed To Upload JSON Dump File: {json_upload_result.get("message")}'}
+    #     print(f'{"[INFO]":<10} JSON Dump File Uploaded To Azure BLOB: "{Path(json_dump_file_path).name}"')
+    # except Exception as error:
+    #     return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': str(error)}
 
     return {'status': 'SUCCESS', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': 'Refresh code base completed successfully'}
