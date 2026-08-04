@@ -57,14 +57,17 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
 
     # Upload File To Azure BLOB:S7
     try:
-        upload_file_blob_client = blob_container_client.get_blob_client(upload_file_path_object.name)
+        if upload_file_path_object.name == 'FileHashDetails.json':
+            upload_file_blob_client = blob_container_client.get_blob_client(upload_file_path_object.name)
+        else:
+            upload_file_blob_client = blob_container_client.get_blob_client(f'AnalysisEngine/{upload_file_path_object.name}')
         with open(upload_file_path, 'rb') as local_file_data:
             upload_file_blob_client.upload_blob(
                 local_file_data,
                 overwrite = True,
                 content_settings = ContentSettings(content_md5 = upload_file_hash_bytes) #type: ignore
             )
-        print(f'{"[INFO]":<10} File Uploaded To BLOB: "{upload_file_path_object.name}"')
+        print(f'{"[INFO]":<10} File Uploaded To BLOB: "{upload_file_blob_client.blob_name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '7', 'message': str(error)}
 
@@ -73,18 +76,8 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
         blob_properties = upload_file_blob_client.get_blob_properties()
         if (upload_file_size == blob_properties.size) and (upload_file_hash_bytes == blob_properties.content_settings.content_md5):
             print(f'{"[INFO]":<10} Uploaded File Size And MD5 Verified Successfully')
+            return {'status': 'SUCCESS', 'script_name': 'File-Upload-To-BLOB', 'step': '8', 'message': 'File Uploaded And Verified Successfully'}
         else:
             return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '8', 'message': 'Uploaded File Size Or MD5 Verification Failed'}
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '8', 'message': str(error)}
-
-    # Create Directories In Azure BLOB Container:S9
-    try:
-        for directory_name in ['FileDownload', 'FileUpload']:
-            directory_blob_client = blob_container_client.get_blob_client(f'{directory_name}/')
-            directory_blob_client.upload_blob(b'', overwrite = True)
-            print(f'{"[INFO]":<10} Directory Created In Azure BLOB Container: "{directory_name}"')
-    except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '9', 'message': str(error)}
-
-    return {'status': 'SUCCESS', 'script_name': 'File-Upload-To-BLOB', 'step': '9', 'message': 'File Uploaded And Verified Successfully'}
