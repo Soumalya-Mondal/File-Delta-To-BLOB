@@ -8,6 +8,7 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
         import hashlib
         from datetime import datetime
         import shutil
+        from supportscript.fileuploadtoblob import file_upload_to_blob
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '1', 'message': str(error)}
 
@@ -34,6 +35,7 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
             shutil.rmtree(str(files_upload_folder_path_object))
         files_upload_folder_path_object.mkdir(parents = True, exist_ok = True)
         print(f'{"[INFO]":<10} FilesUpload Folder Deleted And Recreated: "{files_upload_folder_path_object.name}"')
+        files_to_upload_list = []
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '3', 'message': str(error)}
 
@@ -175,6 +177,7 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
             destination_file_path_object = files_upload_folder_path_object / relative_file_path
             destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
             shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
+            files_to_upload_list.append(str(destination_file_path_object))
             added_files_copied_count += 1
         print(f'{"[INFO]":<10} Total Added Files Copied To Upload Folder: {added_files_copied_count}')
     except Exception as error:
@@ -187,6 +190,7 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
             destination_file_path_object = files_upload_folder_path_object / relative_file_path
             destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
             shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
+            files_to_upload_list.append(str(destination_file_path_object))
             modified_files_copied_count += 1
         print(f'{"[INFO]":<10} Total Modified Files Copied To Upload Folder: {modified_files_copied_count}')
     except Exception as error:
@@ -259,4 +263,24 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '17', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Refresh-Code-Base', 'step': '17', 'message': 'Refresh code base completed successfully'}
+    # Upload Files To Azure BLOB Container:S18
+    try:
+        print(f'{"[INFO]":<10} Total Files Ready For Upload To Azure BLOB: {len(files_to_upload_list)}')
+        for upload_file_path in files_to_upload_list:
+            upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = upload_file_path)
+            if upload_result.get('status') != 'SUCCESS':
+                return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '18', 'message': f'Failed To Upload File "{upload_file_path}": {upload_result.get("message")}'}
+        print(f'{"[INFO]":<10} Total Files Uploaded To Azure BLOB: {len(files_to_upload_list)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '18', 'message': str(error)}
+
+    # Upload JSON Dump File To Azure BLOB Container:S19
+    try:
+        json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path)
+        if json_upload_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '19', 'message': f'Failed To Upload JSON Dump File: {json_upload_result.get("message")}'}
+        print(f'{"[INFO]":<10} JSON Dump File Uploaded To Azure BLOB: "{Path(json_dump_file_path).name}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '19', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Refresh-Code-Base', 'step': '19', 'message': 'Refresh code base completed successfully'}
