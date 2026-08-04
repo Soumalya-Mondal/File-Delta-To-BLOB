@@ -1,5 +1,5 @@
 # Define "file_download_from_blob" Function
-def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: str, file_hash_download: bool = True) -> dict[str, str]: #type: ignore
+def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: str, file_hash_download: bool = Flase) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
