@@ -8,6 +8,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
         import json
         from datetime import datetime
         from supportscript.fileuploadtoblob import file_upload_to_blob
+        from supportscript.fliesclearefromblob import files_clear_from_blob
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '1', 'message': str(error)}
 
@@ -24,15 +25,24 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '2', 'message': str(error)}
 
-    # Create Analysis File Hash Database:S3
+    # Clear Files From Azure BLOB Container:S3
+    try:
+        blob_clear_result = files_clear_from_blob(env_file_path = str(env_file_path), hash_file_delete = True)
+        if blob_clear_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '3', 'message': str(blob_clear_result)}
+        print(f'{"[INFO]":<10} Azure BLOB Container Cleared Including "FileHashDetails.json"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '3', 'message': str(error)}
+
+    # Create Analysis File Hash Database:S4
     try:
         database_connection = sqlite3.connect(str(database_file_path_object))
         database_connection.close()
         print(f'{"[INFO]":<10} Analysis File Hash Database Created At: "{database_file_path_object.name}"')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '3', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '4', 'message': str(error)}
 
-    # Create Analysis File Hash Table:S4
+    # Create Analysis File Hash Table:S5
     try:
         if database_file_path_object.exists():
             database_connection = sqlite3.connect(str(database_file_path_object))
@@ -52,11 +62,11 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
             database_connection.close()
             print(f'{"[INFO]":<10} Analysis File Hash Table Verified In Database')
         else:
-            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '4', 'message': 'Analysis File Hash Database File Not Found'}
+            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '5', 'message': 'Analysis File Hash Database File Not Found'}
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '4', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '5', 'message': str(error)}
 
-    # Collect All Files From Analysis Engine:S5
+    # Collect All Files From Analysis Engine:S6
     try:
         analysis_engine_files_path_list = []
         exclude_folder_list = ['node_modules', '__pycache__', '.git', '.venv']
@@ -72,11 +82,11 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
                     analysis_engine_files_path_list.append(file_path)
             print(f'{"[INFO]":<10} Total Files Collected From Analysis Engine: {len(analysis_engine_files_path_list)}')
         else:
-            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '5', 'message': 'Analysis Engine Folder Does Not Exist Or Is Not Directory'}
+            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '6', 'message': 'Analysis Engine Folder Does Not Exist Or Is Not Directory'}
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '5', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '6', 'message': str(error)}
 
-    # Calculate MD5 Hash For All Collected Files:S6
+    # Calculate MD5 Hash For All Collected Files:S7
     try:
         file_hash_details_dict = {}
         for file_path in analysis_engine_files_path_list:
@@ -93,9 +103,9 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
             }
         print(f'{"[INFO]":<10} Total MD5 Hashes Calculated: {len(file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '6', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '7', 'message': str(error)}
 
-    # Insert MD5 Hashes Into Database:S7
+    # Insert MD5 Hashes Into Database:S8
     try:
         database_connection = sqlite3.connect(str(database_file_path_object))
         database_cursor = database_connection.cursor()
@@ -108,28 +118,28 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
                 ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
                 total_inserted += 1
             except sqlite3.IntegrityError as integrity_error:
-                print(f'{"[WARNING]":<10} [Rebase-Files-Details:S7] - Duplicate Entry Skipped For File: {file_path}')
+                print(f'{"[WARNING]":<10} [Rebase-Files-Details:S8] - Duplicate Entry Skipped For File: {file_path}')
         database_connection.commit()
         database_connection.close()
         print(f'{"[INFO]":<10} Total Records Inserted Into Database: {total_inserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '7', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '8', 'message': str(error)}
 
-    # Create File Hash Details JSON:S8
+    # Create File Hash Details JSON:S9
     try:
         with open(json_dump_file_path_object, 'w', encoding = 'utf-8') as json_file:
             json.dump(file_hash_details_dict, json_file, indent = 2)
         print(f'{"[INFO]":<10} File Hash Details JSON Created At: "{json_dump_file_path_object.name}"')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '8', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': str(error)}
 
-    # Upload File Hash Details JSON To Azure BLOB:S9
+    # Upload File Hash Details JSON To Azure BLOB:S10
     try:
         file_upload_result = file_upload_to_blob(str(env_file_path), str(json_dump_file_path_object))
         if file_upload_result.get('status') != 'SUCCESS':
-            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': str(file_upload_result)}
+            return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': str(file_upload_result)}
         print(f'{"[INFO]":<10} File Hash Details JSON Uploaded To Azure BLOB: "{json_dump_file_path_object.name}"')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Rebase-Files-Details', 'step': '9', 'message': 'Rebase completed successfully'}
+    return {'status': 'SUCCESS', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': 'Rebase completed successfully'}

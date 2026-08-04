@@ -1,5 +1,5 @@
 # Define "files_clear_from_blob" Function
-def files_clear_from_blob(env_file_path: str) -> dict[str, str]: #type: ignore
+def files_clear_from_blob(env_file_path: str, hash_file_delete: bool = False) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
@@ -29,19 +29,29 @@ def files_clear_from_blob(env_file_path: str) -> dict[str, str]: #type: ignore
     # Delete All Existing BLOBs From Container:S4
     try:
         for blob_file_path in blob_container_client.list_blobs():
-            if blob_file_path.name != 'FileHashDetails.json':
+            if hash_file_delete or blob_file_path.name != 'FileHashDetails.json':
                 blob_container_client.delete_blob(blob_file_path.name)
-        print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container Except "FileHashDetails.json"')
+        if hash_file_delete:
+            print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container Including "FileHashDetails.json"')
+        else:
+            print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container Except "FileHashDetails.json"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Files-Clear-From-BLOB', 'step': '4', 'message': str(error)}
 
-    # Verify All BLOBs Deleted Except "FileHashDetails.json":S5
+    # Verify All BLOBs Deleted Based On hash_file_delete Parameter:S5
     try:
         remaining_blobs = [blob.name for blob in blob_container_client.list_blobs()]
-        if (len(remaining_blobs) == 0) or (len(remaining_blobs) == 1 and remaining_blobs[0] == 'FileHashDetails.json'):
-            print(f'{"[INFO]":<10} Verified: Only "FileHashDetails.json" Remains In Container')
-            return {'status': 'SUCCESS', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': 'Container Cleared Successfully Except "FileHashDetails.json"'}
+        if hash_file_delete:
+            if len(remaining_blobs) == 0:
+                print(f'{"[INFO]":<10} Verified: Container Is Empty')
+                return {'status': 'SUCCESS', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': 'Container Cleared Successfully Including "FileHashDetails.json"'}
+            else:
+                return {'status': 'ERROR', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': f'Unexpected BLOBs Still Present: {remaining_blobs}'}
         else:
-            return {'status': 'ERROR', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': f'Unexpected BLOBs Still Present: {remaining_blobs}'}
+            if (len(remaining_blobs) == 0) or (len(remaining_blobs) == 1 and remaining_blobs[0] == 'FileHashDetails.json'):
+                print(f'{"[INFO]":<10} Verified: Only "FileHashDetails.json" Remains In Container')
+                return {'status': 'SUCCESS', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': 'Container Cleared Successfully Except "FileHashDetails.json"'}
+            else:
+                return {'status': 'ERROR', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': f'Unexpected BLOBs Still Present: {remaining_blobs}'}
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Files-Clear-From-BLOB', 'step': '5', 'message': str(error)}

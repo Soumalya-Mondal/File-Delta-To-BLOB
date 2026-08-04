@@ -26,9 +26,7 @@ if __name__ == '__main__':
         env_file_path = Path(parent_folder_path) / '.env'
         database_folder_path = Path(parent_folder_path) / 'database'
         database_folder_path.mkdir(parents = True, exist_ok = True)
-        files_download_folder_path = Path(parent_folder_path) / 'FilesDownload'
-        files_download_folder_path.mkdir(parents = True, exist_ok = True)
-        files_upload_folder_path = Path(parent_folder_path) / 'FilesUpload'
+        files_upload_folder_path = Path(parent_folder_path) / 'AnalysisEngine'
         files_upload_folder_path.mkdir(parents = True, exist_ok = True)
         database_file_path = Path(database_folder_path) / 'AnalysisFileHash.db'
         file_hash_details_json_path = Path(parent_folder_path) / 'FileHashDetails.json'
