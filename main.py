@@ -16,8 +16,7 @@ if __name__ == '__main__':
     # Importing User Define Function:S3
     try:
         from supportscript.rebasefilesdetails import rebase_files_details
-        from supportscript.uploadfilesdelta import upload_files_delta
-        from supportscript.downloadfilesdelta import download_files_delta
+        from supportscript.refreshcodebase import refresh_code_base
     except Exception as error:
         print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S3] - {str(error)}')
 
@@ -41,8 +40,7 @@ if __name__ == '__main__':
     try:
         print('~' * 50)
         print('[A] -> Rebase Files Details')
-        print('[B] -> Upload Files Delta')
-        print('[C] -> Download Files Delta')
+        print('[B] -> Refresh Code Base')
         print('~' * 50)
         user_choice = input('Please Enter Your Choice: ').strip().upper()
     except Exception as error:
@@ -59,24 +57,17 @@ if __name__ == '__main__':
         except Exception as error:
             print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S6] - {str(error)}')
 
-    # If User Choose Option-B As Upload Files Delta:S7
+    # If User Choose Option-B As Refresh Code Base:S7
     elif user_choice == 'B':
         try:
             print('')
-            print('~' * 25, ' Upload Files Delta ', '~' * 25)
-            upload_files_result = upload_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path), files_upload_folder_path = str(files_upload_folder_path))
-            print(f'{"[" + str(upload_files_result.get("status")) + "]":<10} {str(upload_files_result.get("message"))}')
+            print('~' * 25, ' Refresh Code Base ', '~' * 25)
+            refresh_code_base_result = refresh_code_base(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path), files_upload_folder_path = str(files_upload_folder_path))
+            print(f'{"[" + str(refresh_code_base_result.get("status")) + "]":<10} {str(refresh_code_base_result.get("message"))}')
             print('~' * 84)
         except Exception as error:
             print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S7] - {str(error)}')
 
-    # If User Choose Option-C As Download Files Delta:S8
-    elif user_choice == 'C':
-        try:
-            print(download_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path)))
-        except Exception as error:
-            print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S8] - {str(error)}')
-
     # If User Choose Invalid Option:S9
     else:
-        print(f'{"[WARNING]":<10} [File-Delta-To-BLOB:S9] - Invalid Choice. Please enter A, B, or C.')
+        print(f'{"[WARNING]":<10} [File-Delta-To-BLOB:S9] - Invalid Choice. Please enter A or B.')

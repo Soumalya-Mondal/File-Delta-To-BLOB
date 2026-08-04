@@ -1,5 +1,5 @@
-# Define "upload_files_delta" Function
-def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_file_path: str, analysis_engine_folder_path: str, files_upload_folder_path: str) -> dict[str, str]: #type: ignore
+# Define "refresh_code_base" Function
+def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_file_path: str, analysis_engine_folder_path: str, files_upload_folder_path: str) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
@@ -9,23 +9,23 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         from datetime import datetime
         import shutil
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '1', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '1', 'message': str(error)}
 
     # Check Env, Database And JSON File Present:S2
     try:
         env_file_object = Path(env_file_path)
         if not env_file_object.exists() or not env_file_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'Environment file not found or not a file: {env_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '2', 'message': f'Environment file not found or not a file: {env_file_path}'}
 
         database_file_object = Path(database_file_path)
         if not database_file_object.exists() or not database_file_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'Database file not found or not a file: {database_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '2', 'message': f'Database file not found or not a file: {database_file_path}'}
 
         json_dump_file_object = Path(json_dump_file_path)
         if not json_dump_file_object.exists() or not json_dump_file_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'JSON dump file not found or not a file: {json_dump_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '2', 'message': f'JSON dump file not found or not a file: {json_dump_file_path}'}
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '2', 'message': str(error)}
 
     # Delete And Recreate FilesUpload Folder:S3
     try:
@@ -35,7 +35,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         files_upload_folder_path_object.mkdir(parents = True, exist_ok = True)
         print(f'{"[INFO]":<10} FilesUpload Folder Deleted And Recreated: "{files_upload_folder_path_object.name}"')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '3', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '3', 'message': str(error)}
 
     # Connect To Analysis File Hash Database And Fetch Existing Hashes:S4
     try:
@@ -56,7 +56,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         print(f'{"[INFO]":<10} Analysis File Hash Database Connected At: "{database_file_object.name}"')
         print(f'{"[INFO]":<10} Total File Hash Records Fetched: {len(database_file_full_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '4', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '4', 'message': str(error)}
 
     # Load JSON Dump File And Extract File Hashes:S5
     try:
@@ -66,7 +66,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         print(f'{"[INFO]":<10} JSON Dump File Loaded: "{json_dump_file_object.name}"')
         print(f'{"[INFO]":<10} Total JSON File Hash Records Fetched: {len(json_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '5', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '5', 'message': str(error)}
 
     # Compare Database And JSON File Hashes:S6
     try:
@@ -76,9 +76,9 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
             print(f'{"[INFO]":<10} Database And JSON File Hashes Matched Perfectly')
             print(f'{"[INFO]":<10} Total Final File Hash Records: {len(final_file_hash_details_dict)}')
         else:
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '6', 'message': 'Database And JSON File Hashes Do Not Match'}
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '6', 'message': 'Database And JSON File Hashes Do Not Match'}
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '6', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '6', 'message': str(error)}
 
     # Collect All Files From Analysis Engine:S7
     try:
@@ -96,9 +96,9 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
                     analysis_engine_files_path_list.append(file_path)
             print(f'{"[INFO]":<10} Total Files Collected From Analysis Engine: {len(analysis_engine_files_path_list)}')
         else:
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '7', 'message': 'Analysis Engine Folder Does Not Exist Or Is Not Directory'}
+            return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': 'Analysis Engine Folder Does Not Exist Or Is Not Directory'}
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '7', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '7', 'message': str(error)}
 
     # Calculate MD5 Hash For All Collected Files:S8
     try:
@@ -116,7 +116,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
             }
         print(f'{"[INFO]":<10} Total MD5 Hashes Calculated: {len(current_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '8', 'message': str(error)}
 
     # Identify Added Files From Current File Hashes:S9
     try:
@@ -132,7 +132,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
                 }
         print(f'{"[INFO]":<10} Total Added File Hash Records Identified: {len(added_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '9', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '9', 'message': str(error)}
 
     # Identify Modified Files From Current File Hashes:S10
     try:
@@ -149,7 +149,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
                 }
         print(f'{"[INFO]":<10} Total Modified File Hash Records Identified: {len(modified_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '10', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '10', 'message': str(error)}
 
     # Identify Deleted Files From Final File Hashes:S11
     try:
@@ -166,7 +166,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
                 }
         print(f'{"[INFO]":<10} Total Deleted File Hash Records Identified: {len(deleted_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '11', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '11', 'message': str(error)}
 
     # Copy Added Files To FilesUpload Folder:S12
     try:
@@ -178,7 +178,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
             added_files_copied_count += 1
         print(f'{"[INFO]":<10} Total Added Files Copied To Upload Folder: {added_files_copied_count}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '12', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '12', 'message': str(error)}
 
     # Copy Modified Files To FilesUpload Folder:S13
     try:
@@ -190,7 +190,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
             modified_files_copied_count += 1
         print(f'{"[INFO]":<10} Total Modified Files Copied To Upload Folder: {modified_files_copied_count}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '13', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '13', 'message': str(error)}
 
     # Insert Or Update Added File Details Into Database:S14
     try:
@@ -207,7 +207,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         database_connection.close()
         print(f'{"[INFO]":<10} Total Added File Details Upserted Into Database: {total_added_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '14', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '14', 'message': str(error)}
 
     # Insert Or Update Modified File Details Into Database:S15
     try:
@@ -224,7 +224,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         database_connection.close()
         print(f'{"[INFO]":<10} Total Modified File Details Upserted Into Database: {total_modified_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '15', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '15', 'message': str(error)}
 
     # Insert Or Update Deleted File Details Into Database:S16
     try:
@@ -241,7 +241,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         database_connection.close()
         print(f'{"[INFO]":<10} Total Deleted File Details Upserted Into Database: {total_deleted_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '16', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '16', 'message': str(error)}
 
     # Update JSON Dump File With Added, Modified And Deleted File Details:S17
     try:
@@ -257,6 +257,6 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_file_hash_details_dict)}')
         print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(deleted_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '17', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '17', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '17', 'message': 'Upload files delta completed successfully'}
+    return {'status': 'SUCCESS', 'script_name': 'Refresh-Code-Base', 'step': '17', 'message': 'Refresh code base completed successfully'}
