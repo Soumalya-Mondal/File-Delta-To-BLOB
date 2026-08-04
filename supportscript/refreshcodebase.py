@@ -1,5 +1,5 @@
 # Define "refresh_code_base" Function
-def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_file_path: str, analysis_engine_folder_path: str, files_upload_folder_path: str) -> dict[str, str]: #type: ignore
+def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_file_path: str, analysis_engine_folder_path: str, files_delta_store_folder_path: str) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
@@ -28,13 +28,13 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '2', 'message': str(error)}
 
-    # Delete And Recreate FilesUpload Folder:S3
+    # Delete And Recreate FilesDelta Folder:S3
     try:
-        files_upload_folder_path_object = Path(files_upload_folder_path)
-        if files_upload_folder_path_object.exists():
-            shutil.rmtree(str(files_upload_folder_path_object))
-        files_upload_folder_path_object.mkdir(parents = True, exist_ok = True)
-        print(f'{"[INFO]":<10} FilesUpload Folder Deleted And Recreated: "{files_upload_folder_path_object.name}"')
+        files_delta_store_folder_path_object = Path(files_delta_store_folder_path)
+        if files_delta_store_folder_path_object.exists():
+            shutil.rmtree(str(files_delta_store_folder_path_object))
+        files_delta_store_folder_path_object.mkdir(parents = True, exist_ok = True)
+        print(f'{"[INFO]":<10} FilesDelta Folder Deleted And Recreated: "{files_delta_store_folder_path_object.name}"')
         files_to_upload_list = []
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '3', 'message': str(error)}
@@ -170,11 +170,11 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '11', 'message': str(error)}
 
-    # Copy Added Files To FilesUpload Folder:S12
+    # Copy Added Files To FilesDelta Folder:S12
     try:
         added_files_copied_count = 0
         for relative_file_path in added_file_hash_details_dict:
-            destination_file_path_object = files_upload_folder_path_object / relative_file_path
+            destination_file_path_object = files_delta_store_folder_path_object / relative_file_path
             destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
             shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
             files_to_upload_list.append(str(destination_file_path_object))
@@ -183,11 +183,11 @@ def refresh_code_base(env_file_path: str, database_file_path: str, json_dump_fil
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Refresh-Code-Base', 'step': '12', 'message': str(error)}
 
-    # Copy Modified Files To FilesUpload Folder:S13
+    # Copy Modified Files To FilesDelta Folder:S13
     try:
         modified_files_copied_count = 0
         for relative_file_path in modified_file_hash_details_dict:
-            destination_file_path_object = files_upload_folder_path_object / relative_file_path
+            destination_file_path_object = files_delta_store_folder_path_object / relative_file_path
             destination_file_path_object.parent.mkdir(parents = True, exist_ok = True)
             shutil.copy2(str(Path(analysis_engine_folder_path) / relative_file_path), str(destination_file_path_object))
             files_to_upload_list.append(str(destination_file_path_object))

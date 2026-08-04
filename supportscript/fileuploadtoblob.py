@@ -60,7 +60,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
         if upload_file_path_object.name == 'FileHashDetails.json':
             upload_file_blob_client = blob_container_client.get_blob_client(upload_file_path_object.name)
         else:
-            upload_file_blob_client = blob_container_client.get_blob_client(f'AnalysisEngine/{upload_file_path_object.name}')
+            upload_file_blob_client = blob_container_client.get_blob_client(f'FilesDeltaStore/{upload_file_path_object.name}')
         with open(upload_file_path, 'rb') as local_file_data:
             upload_file_blob_client.upload_blob(
                 local_file_data,

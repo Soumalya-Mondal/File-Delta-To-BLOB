@@ -26,8 +26,8 @@ if __name__ == '__main__':
         env_file_path = Path(parent_folder_path) / '.env'
         database_folder_path = Path(parent_folder_path) / 'database'
         database_folder_path.mkdir(parents = True, exist_ok = True)
-        files_upload_folder_path = Path(parent_folder_path) / 'AnalysisEngine'
-        files_upload_folder_path.mkdir(parents = True, exist_ok = True)
+        files_delta_store_folder_path = Path(parent_folder_path) / 'FilesDeltaStore'
+        files_delta_store_folder_path.mkdir(parents = True, exist_ok = True)
         database_file_path = Path(database_folder_path) / 'AnalysisFileHash.db'
         file_hash_details_json_path = Path(parent_folder_path) / 'FileHashDetails.json'
         analysis_engine_folder_path = Path('/home/soumalya/Desktop/Office-Work/Analytics-Engine')
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         try:
             print('')
             print('~' * 25, ' Refresh Code Base ', '~' * 25)
-            refresh_code_base_result = refresh_code_base(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path), files_upload_folder_path = str(files_upload_folder_path))
+            refresh_code_base_result = refresh_code_base(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path), files_delta_store_folder_path = str(files_delta_store_folder_path))
             print(f'{"[" + str(refresh_code_base_result.get("status")) + "]":<10} {str(refresh_code_base_result.get("message"))}')
             print('~' * 84)
         except Exception as error:
