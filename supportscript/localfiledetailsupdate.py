@@ -240,4 +240,4 @@ def local_file_details_update(database_file_path: str, json_dump_file_path: str,
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Local-File-Details-Update', 'step': '15', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Local-File-Details-Update', 'step': '15', 'message': 'Local file details updated successfully', 'files_to_upload_list': files_to_upload_list}
+    return {'status': 'SUCCESS', 'script_name': 'Local-File-Details-Update', 'step': '15', 'message': 'Local File Details Updated Successfully', 'files_to_upload_list': files_to_upload_list}
