@@ -80,7 +80,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
                     continue
                 if file_path.is_file():
                     analysis_engine_files_path_list.append(file_path)
-            print(f'{"[INFO]":<10} Total Files Collected From Analysis Engine: {len(analysis_engine_files_path_list)}')
+            print(f'{"[INFO]":<10} Total Files Collected From Source Folder: {len(analysis_engine_files_path_list)}')
         else:
             return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '6', 'message': 'Analysis Engine Folder Does Not Exist Or Is Not Directory'}
     except Exception as error:
