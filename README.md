@@ -21,7 +21,7 @@
 - [Configuration](#configuration)
 - [Usage](#usage)
   - [A) Rebase Files Details](#a-rebase-files-details)
-  - [B) Refresh Code Base](#b-refresh-code-base)
+  - [B) Upload Files Delta](#b-upload-files-delta)
 - [Project Structure](#project-structure)
 - [How It Works](#how-it-works)
 - [Database Schema](#database-schema)
@@ -54,7 +54,7 @@ Modern development workflows often require syncing large codebases across distri
 | **SQLite Ledger** | Local `AnalysisFileHash.db` maintains full audit history (status, timestamps, sizes). |
 | **JSON Snapshot** | `FileHashDetails.json` acts as a lightweight, portable state snapshot synced to Blob. |
 | **Smart Exclusions** | Automatically ignores `node_modules`, `__pycache__`, `.git`, `.venv`, lock files, and dotenv files. |
-| **Two Operation Modes** | **Rebase** for clean slate initialization; **Refresh** for incremental updates. |
+| **Two Operation Modes** | **Rebase** for clean slate initialization; **Upload** for incremental updates. |
 | **Step-Level Observability** | Every operation returns a structured dict (`status`, `script_name`, `step`, `message`) for precise error tracing. |
 
 ---
@@ -171,7 +171,7 @@ You will be presented with an interactive menu:
 ```text
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [A] -> Rebase Files Details
-[B] -> Refresh Code Base
+[B] -> Upload Files Delta
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Please Enter Your Choice:
 ```
@@ -196,7 +196,7 @@ Please Enter Your Choice:
 - After major repository restructuring.
 - When you want a completely clean synchronization baseline.
 
-### B) Refresh Code Base
+### B) Upload Files Delta
 
 **Purpose:** Incrementally synchronize only the files that changed since the last run.
 
@@ -239,7 +239,7 @@ File-Delta-To-BLOB/
 │
 └── supportscript/                       # Modular operation scripts
     ├── rebasefilesdetails.py            # Full rebase: scan, hash, create DB/JSON, upload
-    ├── refreshcodebase.py               # Incremental refresh orchestrator
+    ├── uploadfilesdelta.py              # Incremental upload orchestrator
     ├── filedetailscompare.py            # Download remote JSON and validate against local
     ├── localfiledetailsupdate.py        # Detect Added/Modified/Deleted; stage files; update DB/JSON
     ├── localfileprocess.py              # (WIP stub — currently unimplemented)
@@ -261,7 +261,7 @@ Each tracked file can be in one of four states:
 | State | Meaning |
 |-------|---------|
 | `Original` | File existed during the last Rebase and has not changed. |
-| `Added` | New file detected after the last Rebase/Refresh. |
+| `Added` | New file detected after the last Rebase/Upload. |
 | `Modified` | File exists but its MD5 hash differs from the recorded hash. |
 | `Deleted` | File existed in the snapshot but is no longer present locally. |
 
@@ -341,7 +341,7 @@ The following behaviors are present in the current codebase and should be unders
    `analysis_engine_folder_path` is hardcoded as an absolute path in `main.py` (line 33). You must edit the source code to point to your own directory.
 
 2. **Container-wide deletion on every upload**  
-   `fileuploadtoblob.py` deletes **all existing blobs** in the container before uploading a single file. When `refreshcodebase.py` loops over multiple delta files, the container is wiped for each file upload. This means with the current logic, after a refresh operation only the JSON snapshot may remain in Blob. **This is a critical behavior that needs architectural correction.**
+   `fileuploadtoblob.py` deletes **all existing blobs** in the container before uploading a single file. When `uploadfilesdelta.py` loops over multiple delta files, the container is wiped for each file upload. This means with the current logic, after an upload operation only the JSON snapshot may remain in Blob. **This is a critical behavior that needs architectural correction.**
 
 3. **Unimplemented stub module**  
    `localfileprocess.py` exists as a placeholder but contains no actual logic.
