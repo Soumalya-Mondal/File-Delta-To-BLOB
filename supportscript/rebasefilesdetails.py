@@ -118,7 +118,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
                 ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
                 total_inserted += 1
             except sqlite3.IntegrityError as integrity_error:
-                print(f'{"[WARNING]":<10} [Rebase-Files-Details:S8] - Duplicate Entry Skipped For File: {file_path}')
+                print(f'{"[WARNING]":<10} [Rebase-Files-Details:S8] - Duplicate Entry Skipped For File: "{Path(file_path).name}"')
         database_connection.commit()
         database_connection.close()
         print(f'{"[INFO]":<10} Total Records Inserted Into Database: {total_inserted}')
@@ -142,4 +142,4 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': 'Rebase completed successfully'}
+    return {'status': 'SUCCESS', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': 'Rebase Completed Successfully'}

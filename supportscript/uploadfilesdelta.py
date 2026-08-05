@@ -15,15 +15,15 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     try:
         env_file_object = Path(env_file_path)
         if not env_file_object.exists() or not env_file_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'Environment file not found or not a file: {env_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'Environment File Not Found Or Not A File: "{Path(env_file_path).name}"'}
 
         database_file_object = Path(database_file_path)
         if not database_file_object.exists() or not database_file_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'Database file not found or not a file: {database_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'Database File Not Found Or Not A File: "{Path(database_file_path).name}"'}
 
         json_dump_file_object = Path(json_dump_file_path)
         if not json_dump_file_object.exists() or not json_dump_file_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'JSON dump file not found or not a file: {json_dump_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': f'JSON Dump File Not Found Or Not A File: "{Path(json_dump_file_path).name}"'}
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '2', 'message': str(error)}
 
@@ -74,7 +74,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         for upload_file_path in files_to_upload_list:
             upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = upload_file_path, blobs_delete = False)
             if upload_result.get('status') != 'SUCCESS':
-                return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '6', 'message': f'Failed To Upload File "{upload_file_path}": {upload_result.get("message")}'}
+                return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '6', 'message': f'Failed To Upload File "{Path(upload_file_path).name}": {upload_result.get("message")}'}
         print(f'{"[INFO]":<10} Total Files Uploaded To Azure BLOB: {len(files_to_upload_list)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '6', 'message': str(error)}
@@ -103,4 +103,4 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': 'Upload files delta completed successfully'}
+    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': 'Upload Files Delta Completed Successfully'}

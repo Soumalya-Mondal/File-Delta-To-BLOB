@@ -26,9 +26,9 @@ def file_details_compare(env_file_path: str, files_delta_store_folder_path: str,
     # Load File Hash Details JSON File From BLOB:S3
     try:
         if not files_delta_store_folder_path_object.exists() or not files_delta_store_folder_path_object.is_dir():
-            return {'status': 'ERROR', 'script_name': 'File-Details-Compare', 'step': '3', 'message': f'FilesDelta Folder Not Found Or Not A Directory: {files_delta_store_folder_path}'}
+            return {'status': 'ERROR', 'script_name': 'File-Details-Compare', 'step': '3', 'message': f'FilesDelta Folder Not Found Or Not A Directory: "{Path(files_delta_store_folder_path).name}"'}
         if not (files_delta_store_folder_path_object / 'FileHashDetails.json').exists() or not (files_delta_store_folder_path_object / 'FileHashDetails.json').is_file():
-            return {'status': 'ERROR', 'script_name': 'File-Details-Compare', 'step': '3', 'message': f'FileHashDetails.json From BLOB Not Found Or Not A File: {files_delta_store_folder_path_object / "FileHashDetails.json"}'}
+            return {'status': 'ERROR', 'script_name': 'File-Details-Compare', 'step': '3', 'message': f'FileHashDetails.json From BLOB Not Found Or Not A File: "{(files_delta_store_folder_path_object / "FileHashDetails.json").name}"'}
         with open(files_delta_store_folder_path_object / 'FileHashDetails.json', 'r', encoding = 'utf-8') as file_hash_details_file_object:
             file_hash_json_data_from_blob = json.load(file_hash_details_file_object)
         print(f'{"[INFO]":<10} File Hash Details From BLOB Loaded: "{(files_delta_store_folder_path_object / "FileHashDetails.json").name}"')
@@ -39,7 +39,7 @@ def file_details_compare(env_file_path: str, files_delta_store_folder_path: str,
     try:
         json_dump_file_path_object = Path(json_dump_file_path)
         if not json_dump_file_path_object.exists() or not json_dump_file_path_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'File-Details-Compare', 'step': '4', 'message': f'JSON Dump File From Local Not Found Or Not A File: {json_dump_file_path}'}
+            return {'status': 'ERROR', 'script_name': 'File-Details-Compare', 'step': '4', 'message': f'JSON Dump File From Local Not Found Or Not A File: "{Path(json_dump_file_path).name}"'}
         with open(json_dump_file_path_object, 'r', encoding = 'utf-8') as json_dump_file_object:
             json_dump_json_data_from_local = json.load(json_dump_file_object)
         print(f'{"[INFO]":<10} JSON Dump File From Local Loaded: "{json_dump_file_path_object.name}"')

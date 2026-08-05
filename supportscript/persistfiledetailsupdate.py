@@ -13,9 +13,9 @@ def persist_file_details_update(database_file_path: str, json_dump_file_path: st
         database_file_object = Path(database_file_path)
         json_dump_file_object = Path(json_dump_file_path)
         if not database_file_object.exists() or not database_file_object.is_file():
-            raise FileNotFoundError(f'Database File Not Found Or Not A Regular File: "{database_file_path}"')
+            raise Exception(f'Database File Not Found Or Not A Regular File: "{Path(database_file_path).name}"')
         if not json_dump_file_object.exists() or not json_dump_file_object.is_file():
-            raise FileNotFoundError(f'JSON Dump File Not Found Or Not A Regular File: "{json_dump_file_path}"')
+            raise Exception(f'JSON Dump File Not Found Or Not A Regular File: "{Path(json_dump_file_path).name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '2', 'message': str(error)}
 

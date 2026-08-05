@@ -17,6 +17,7 @@ if __name__ == '__main__':
     try:
         from supportscript.rebasefilesdetails import rebase_files_details
         from supportscript.uploadfilesdelta import upload_files_delta
+        from supportscript.downloadfilesdelta import download_files_delta
     except Exception as error:
         print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S3] - {str(error)}')
 
@@ -72,11 +73,12 @@ if __name__ == '__main__':
         try:
             print('')
             print('~' * 25, ' Download Files Delta ', '~' * 25)
-            print(f'{"[INFO]":<10} [File-Delta-To-BLOB:S8] - Download Files Delta operation is not yet implemented.')
+            download_files_delta_result = download_files_delta(env_file_path = str(env_file_path), database_file_path = str(database_file_path), json_dump_file_path = str(file_hash_details_json_path), analysis_engine_folder_path = str(analysis_engine_folder_path), files_delta_store_folder_path = str(files_delta_store_folder_path))
+            print(f'{"[" + str(download_files_delta_result.get("status")) + "]":<10} {str(download_files_delta_result.get("message"))}')
             print('~' * 84)
         except Exception as error:
             print(f'{"[ERROR]":<10} [File-Delta-To-BLOB:S8] - {str(error)}')
 
     # If User Choose Invalid Option:S9
     else:
-        print(f'{"[WARNING]":<10} [File-Delta-To-BLOB:S9] - Invalid Choice. Please enter A, B, or C.')
+        print(f'{"[WARNING]":<10} [File-Delta-To-BLOB:S9] - Invalid Choice. Please Enter A, B, Or C.')

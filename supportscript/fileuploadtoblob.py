@@ -78,7 +78,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete:
                 overwrite = True,
                 content_settings = ContentSettings(content_md5 = upload_file_hash_bytes) #type: ignore
             )
-        print(f'{"[INFO]":<10} File Uploaded To BLOB: "{upload_file_blob_client.blob_name}"')
+        print(f'{"[INFO]":<10} File Uploaded To BLOB: "{Path(upload_file_blob_client.blob_name).name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '7', 'message': str(error)}
 

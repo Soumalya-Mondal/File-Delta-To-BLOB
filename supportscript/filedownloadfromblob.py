@@ -81,7 +81,7 @@ def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: s
             blob_file_dict[str(local_file_path)] = blob_properties.content_settings.content_md5
             local_file_relative_path = local_file_path.relative_to(files_delta_store_folder_path_object).as_posix()
             local_file_display_path = f'{files_delta_store_folder_path_object.name}/{local_file_relative_path}'
-            print(f'{"[INFO]":<10} File Downloaded From BLOB: "{blob_name}" -> "{local_file_display_path}"')
+            print(f'{"[INFO]":<10} File Downloaded From BLOB: "{Path(blob_name).name}" -> "{Path(local_file_display_path).name}"')
         print(f'{"[INFO]":<10} Total Files Downloaded: {len(blob_file_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Download-From-BLOB', 'step': '7', 'message': str(error)}
@@ -115,7 +115,7 @@ def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: s
         for file_path, local_md5_hash in downloaded_file_dict.items():
             blob_md5_hash = blob_file_dict[file_path]
             if blob_md5_hash.hex() != local_md5_hash:
-                return {'status': 'ERROR', 'script_name': 'File-Download-From-BLOB', 'step': '9', 'message': f'MD5 Mismatch Detected For File: "{file_path}"'}
+                return {'status': 'ERROR', 'script_name': 'File-Download-From-BLOB', 'step': '9', 'message': f'MD5 Mismatch Detected For File: "{Path(file_path).name}"'}
 
         return {'status': 'SUCCESS', 'script_name': 'File-Download-From-BLOB', 'step': '9', 'message': 'All Downloaded Files MD5 Hashes Verified Successfully'}
     except Exception as error:
