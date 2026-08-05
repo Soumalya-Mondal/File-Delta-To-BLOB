@@ -5,6 +5,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         from pathlib import Path
         import shutil
         from supportscript.localfiledetailsupdate import local_file_details_update
+        from supportscript.persistfiledetailsupdate import persist_file_details_update
         from supportscript.fileuploadtoblob import file_upload_to_blob
         from supportscript.filedetailscompare import file_details_compare
     except Exception as error:
@@ -49,7 +50,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '4', 'message': str(error)}
 
-    # Update Local File Details:S5
+    # Update Local File Details - Detection And Staging:S5
     try:
         local_update_result = local_file_details_update(
             database_file_path = database_file_path,
@@ -60,7 +61,10 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         if local_update_result.get('status') != 'SUCCESS':
             return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '5', 'message': f'Failed To Update Local File Details: {local_update_result.get("message")}'}
         files_to_upload_list = local_update_result.get('files_to_upload_list', [])
-        print(f'{"[INFO]":<10} Local File Details Updated')
+        added_file_hash_details_dict = local_update_result.get('added_file_hash_details_dict', {})
+        modified_file_hash_details_dict = local_update_result.get('modified_file_hash_details_dict', {})
+        deleted_file_hash_details_dict = local_update_result.get('deleted_file_hash_details_dict', {})
+        print(f'{"[INFO]":<10} Local File Details Detection Completed')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '5', 'message': str(error)}
 
@@ -84,4 +88,19 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '7', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '7', 'message': 'Upload files delta completed successfully'}
+    # Persist Local File Details After Successful Upload:S8
+    try:
+        persist_result = persist_file_details_update(
+            database_file_path = database_file_path,
+            json_dump_file_path = json_dump_file_path,
+            added_file_hash_details_dict = added_file_hash_details_dict,
+            modified_file_hash_details_dict = modified_file_hash_details_dict,
+            deleted_file_hash_details_dict = deleted_file_hash_details_dict
+        )
+        if persist_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': f'Failed To Persist Local File Details: {persist_result.get("message")}'}
+        print(f'{"[INFO]":<10} Local File Details Persisted Successfully')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '8', 'message': 'Upload files delta completed successfully'}

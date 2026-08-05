@@ -20,8 +20,10 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete:
 
     # Calculate File MD5 Hash And File Size:S3
     try:
+        md5_hash = hashlib.md5()
         with open(upload_file_path, 'rb') as local_file_data:
-            md5_hash = hashlib.md5(local_file_data.read())
+            while chunk := local_file_data.read(4 * 1024 * 1024):
+                md5_hash.update(chunk)
         upload_file_hash_value = md5_hash.hexdigest()
         upload_file_hash_bytes = md5_hash.digest()
         upload_file_size = upload_file_path_object.stat().st_size
@@ -61,7 +63,15 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete:
         if upload_file_path_object.name == 'FileHashDetails.json':
             upload_file_blob_client = blob_container_client.get_blob_client(upload_file_path_object.name)
         else:
-            upload_file_blob_client = blob_container_client.get_blob_client(f'FilesDeltaStore/{upload_file_path_object.name}')
+            # Preserve the full directory hierarchy under FilesDeltaStore/ in the BLOB name
+            posix_path = upload_file_path_object.as_posix()
+            marker = 'FilesDeltaStore/'
+            idx = posix_path.find(marker)
+            if idx != -1:
+                blob_name = posix_path[idx:]
+            else:
+                blob_name = f'FilesDeltaStore/{upload_file_path_object.name}'
+            upload_file_blob_client = blob_container_client.get_blob_client(blob_name)
         with open(upload_file_path, 'rb') as local_file_data:
             upload_file_blob_client.upload_blob(
                 local_file_data,
