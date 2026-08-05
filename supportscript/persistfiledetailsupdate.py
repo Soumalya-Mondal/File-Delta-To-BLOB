@@ -8,10 +8,18 @@ def persist_file_details_update(database_file_path: str, json_dump_file_path: st
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '1', 'message': str(error)}
 
-    database_file_object = Path(database_file_path)
-    json_dump_file_object = Path(json_dump_file_path)
+    # Validate Database And JSON Dump File Paths Exist And Are Files:S2
+    try:
+        database_file_object = Path(database_file_path)
+        json_dump_file_object = Path(json_dump_file_path)
+        if not database_file_object.exists() or not database_file_object.is_file():
+            raise FileNotFoundError(f'Database File Not Found Or Not A Regular File: "{database_file_path}"')
+        if not json_dump_file_object.exists() or not json_dump_file_object.is_file():
+            raise FileNotFoundError(f'JSON Dump File Not Found Or Not A Regular File: "{json_dump_file_path}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '2', 'message': str(error)}
 
-    # Insert Or Update Added File Details Into Database:S12
+    # Insert Or Update Added File Details Into Database:S3
     try:
         database_connection = sqlite3.connect(str(database_file_object))
         database_cursor = database_connection.cursor()
@@ -26,9 +34,9 @@ def persist_file_details_update(database_file_path: str, json_dump_file_path: st
         database_connection.close()
         print(f'{"[INFO]":<10} Total Added File Details Upserted Into Database: {total_added_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '12', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '3', 'message': str(error)}
 
-    # Insert Or Update Modified File Details Into Database:S13
+    # Insert Or Update Modified File Details Into Database:S4
     try:
         database_connection = sqlite3.connect(str(database_file_object))
         database_cursor = database_connection.cursor()
@@ -43,9 +51,9 @@ def persist_file_details_update(database_file_path: str, json_dump_file_path: st
         database_connection.close()
         print(f'{"[INFO]":<10} Total Modified File Details Upserted Into Database: {total_modified_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '13', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '4', 'message': str(error)}
 
-    # Insert Or Update Deleted File Details Into Database:S14
+    # Insert Or Update Deleted File Details Into Database:S5
     try:
         database_connection = sqlite3.connect(str(database_file_object))
         database_cursor = database_connection.cursor()
@@ -60,9 +68,9 @@ def persist_file_details_update(database_file_path: str, json_dump_file_path: st
         database_connection.close()
         print(f'{"[INFO]":<10} Total Deleted File Details Upserted Into Database: {total_deleted_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '14', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '5', 'message': str(error)}
 
-    # Update JSON Dump File With Added, Modified And Deleted File Details:S15
+    # Update JSON Dump File With Added, Modified And Deleted File Details:S6
     try:
         with open(json_dump_file_object, 'r', encoding = 'utf-8') as json_file:
             json_dump_data = json.load(json_file)
@@ -76,6 +84,6 @@ def persist_file_details_update(database_file_path: str, json_dump_file_path: st
         print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_file_hash_details_dict)}')
         print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(deleted_file_hash_details_dict)}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '15', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Persist-File-Details-Update', 'step': '6', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Persist-File-Details-Update', 'step': '15', 'message': 'Local File Details Persisted Successfully'}
+    return {'status': 'SUCCESS', 'script_name': 'Persist-File-Details-Update', 'step': '6', 'message': 'Local File Details Persisted Successfully'}
