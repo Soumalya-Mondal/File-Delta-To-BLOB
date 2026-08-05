@@ -135,7 +135,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
 
     # Upload File Hash Details JSON To Azure BLOB:S10
     try:
-        file_upload_result = file_upload_to_blob(str(env_file_path), str(json_dump_file_path_object))
+        file_upload_result = file_upload_to_blob(str(env_file_path), str(json_dump_file_path_object), blobs_delete = True)
         if file_upload_result.get('status') != 'SUCCESS':
             return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': str(file_upload_result)}
         print(f'{"[INFO]":<10} File Hash Details JSON Uploaded To Azure BLOB: "{json_dump_file_path_object.name}"')

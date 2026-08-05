@@ -1,5 +1,5 @@
 # Define "file_upload_to_blob" Function
-def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, str]: #type: ignore
+def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete: bool = False) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
@@ -48,12 +48,13 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, 
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '5', 'message': str(error)}
 
     # Delete All Existing BLOBs From Container:S6
-    try:
-        for blob_file_path in blob_container_client.list_blobs():
-            blob_container_client.delete_blob(blob_file_path.name)
-        print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container')
-    except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '6', 'message': str(error)}
+    if blobs_delete:
+        try:
+            for blob_file_path in blob_container_client.list_blobs():
+                blob_container_client.delete_blob(blob_file_path.name)
+            print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container')
+        except Exception as error:
+            return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '6', 'message': str(error)}
 
     # Upload File To Azure BLOB:S7
     try:
