@@ -1,7 +1,5 @@
 # Define "persist_file_details_update" Function
-from typing import Any
-
-def persist_file_details_update(database_file_path: str, json_dump_file_path: str, added_file_hash_details_dict: dict, modified_file_hash_details_dict: dict, deleted_file_hash_details_dict: dict) -> dict[str, Any]:
+def persist_file_details_update(database_file_path: str, json_dump_file_path: str, added_file_hash_details_dict: dict, modified_file_hash_details_dict: dict, deleted_file_hash_details_dict: dict) -> dict[str, str]:
     # Importing Python Module:S1
     try:
         from pathlib import Path

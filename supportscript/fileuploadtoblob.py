@@ -27,7 +27,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete:
         upload_file_hash_value = md5_hash.hexdigest()
         upload_file_hash_bytes = md5_hash.digest()
         upload_file_size = upload_file_path_object.stat().st_size
-        print(f'{"[INFO]":<10} File MD5 Hash Calculated: {upload_file_hash_value}')
+        print(f'{"[INFO]":<10} File MD5 Hash Calculated: "{upload_file_hash_value}"')
         print(f'{"[INFO]":<10} File Size Calculated: {upload_file_size} bytes')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'File-Upload-To-BLOB', 'step': '3', 'message': str(error)}
