@@ -243,12 +243,10 @@ File-Delta-To-BLOB/
     ├── filedetailscompare.py            # Download remote JSON and validate against local
     ├── localfiledetailsupdate.py        # Detect Added/Modified/Deleted; stage files; update DB/JSON
     ├── localfileprocess.py              # (WIP stub — currently unimplemented)
-    ├── fileuploadtoblob.py              # Azure Blob upload with Content-MD5 verification
-    ├── filedownloadfromblob.py          # Azure Blob download with MD5 verification
-    └── fliesclearefromblob.py           # Clear blob container (note: filename has typo)
+    └── blobfilesoperation.py            # Unified Azure Blob operations: upload, download, clear
 ```
 
-> **Note:** `fliesclearefromblob.py` is the actual filename as it exists in the repository (missing the letter `c` in "files").
+
 
 ---
 
@@ -341,7 +339,7 @@ The following behaviors are present in the current codebase and should be unders
    `analysis_engine_folder_path` is hardcoded as an absolute path in `main.py` (line 33). You must edit the source code to point to your own directory.
 
 2. **Container-wide deletion on every upload**  
-   `fileuploadtoblob.py` deletes **all existing blobs** in the container before uploading a single file. When `uploadfilesdelta.py` loops over multiple delta files, the container is wiped for each file upload. This means with the current logic, after an upload operation only the JSON snapshot may remain in Blob. **This is a critical behavior that needs architectural correction.**
+       `blobfilesoperation.py` (`file_upload_to_blob`) deletes **all existing blobs** in the container before uploading a single file when `blobs_delete=True`. When `uploadfilesdelta.py` loops over multiple delta files, the container is wiped for each file upload. This means with the current logic, after an upload operation only the JSON snapshot may remain in Blob. **This is a critical behavior that needs architectural correction.**
 
 3. **Unimplemented stub module**  
    `localfileprocess.py` exists as a placeholder but contains no actual logic.
@@ -353,7 +351,7 @@ The following behaviors are present in the current codebase and should be unders
    There are currently no automated tests. Validation is entirely manual.
 
 6. **Memory usage on upload**  
-   While most MD5 calculations use 4 MB chunked reads, `fileuploadtoblob.py` reads the entire file into memory at once (`local_file_data.read()`) for its own hash calculation. Very large files may cause memory spikes.
+    While most MD5 calculations use 4 MB chunked reads, `blobfilesoperation.py` (`file_upload_to_blob`) reads the entire file into memory at once (`local_file_data.read()`) for its own hash calculation. Very large files may cause memory spikes.
 
 ---
 
@@ -368,7 +366,7 @@ This project is under active development. The following items are planned or in-
 - [ ] **Parallel uploads/downloads**: Leverage `asyncio` or threading to speed up Blob transfers for large delta sets.
 - [ ] **Retention policies**: Auto-clean old `FileHashDetails.json` versions in Blob.
 - [ ] **CLI argument parsing**: Replace interactive `input()` with a proper CLI framework (e.g., `argparse`, `typer`, or `click`) for automation-friendly usage.
-- [ ] **Unified chunked hashing**: Ensure `fileuploadtoblob.py` also uses 4 MB chunked reads for consistency and memory efficiency.
+- [ ] **Unified chunked hashing**: Ensure `blobfilesoperation.py` (`file_upload_to_blob`) also uses 4 MB chunked reads for consistency and memory efficiency.
 - [ ] **Comprehensive logging**: Replace `print()` statements with Python's `logging` module for configurable log levels and file output.
 - [ ] **Unit & integration tests**: Add pytest suites for hash computation, delta detection, and mock Azure Blob interactions.
 - [ ] **Docker support**: Provide a `Dockerfile` and `docker-compose.yml` for containerized execution.

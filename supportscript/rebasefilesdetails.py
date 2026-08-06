@@ -7,8 +7,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
         import hashlib
         import json
         from datetime import datetime
-        from supportscript.fileuploadtoblob import file_upload_to_blob
-        from supportscript.fliesclearefromblob import files_clear_from_blob
+        from supportscript.blobfilesoperation import file_upload_to_blob, files_clear_from_blob
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '1', 'message': str(error)}
 

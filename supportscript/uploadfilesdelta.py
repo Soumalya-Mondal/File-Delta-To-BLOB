@@ -8,9 +8,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         import sqlite3
         import hashlib
         from datetime import datetime
-        from supportscript.fileuploadtoblob import file_upload_to_blob
-        from supportscript.filedownloadfromblob import file_download_from_blob
-        from supportscript.fliesclearefromblob import files_clear_from_blob
+        from supportscript.blobfilesoperation import file_upload_to_blob, file_download_from_blob, files_clear_from_blob
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '1', 'message': str(error)}
 

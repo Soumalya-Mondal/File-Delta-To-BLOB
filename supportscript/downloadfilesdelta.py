@@ -5,7 +5,7 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         from pathlib import Path
         import shutil
         import json
-        from supportscript.filedownloadfromblob import file_download_from_blob
+        from supportscript.blobfilesoperation import file_download_from_blob
         from supportscript.localfileprocess import local_file_process
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '1', 'message': str(error)}
