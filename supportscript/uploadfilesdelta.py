@@ -345,4 +345,14 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '24', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '24', 'message': 'Upload Files Delta Completed Successfully'}
+    # Delete And Recreate FilesDelta Folder:S25
+    try:
+        files_delta_store_folder_path_object = Path(files_delta_store_folder_path)
+        if files_delta_store_folder_path_object.exists():
+            shutil.rmtree(str(files_delta_store_folder_path_object))
+        files_delta_store_folder_path_object.mkdir(parents = True, exist_ok = True)
+        print(f'{"[INFO]":<10} FilesDelta Folder Deleted And Recreated: "{files_delta_store_folder_path_object.name}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '25', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '25', 'message': 'Upload Files Delta Completed Successfully'}
