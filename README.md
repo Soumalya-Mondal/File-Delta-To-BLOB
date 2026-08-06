@@ -5,9 +5,9 @@
 [![uv](https://img.shields.io/badge/uv-package%20manager-8A2BE2)](https://github.com/astral-sh/uv)
 [![Status](https://img.shields.io/badge/status-WIP-yellow.svg)](./README.md)
 
-> **Intelligent file-delta detection and selective Azure Blob Storage synchronization for codebases.**
+> **Intelligent file-delta detection and bidirectional Azure Blob Storage synchronization for codebases.**
 
-`File-Delta-To-BLOB` is a Python-based CLI tool that monitors a local source directory (e.g., an analytics engine or any codebase), computes cryptographic file hashes, maintains a persistent state database, and **only uploads files that actually changed**—Added, Modified, or Deleted—to Azure Blob Storage. It minimizes network I/O, reduces storage costs, and guarantees integrity through end-to-end MD5 verification.
+`File-Delta-To-BLOB` is a Python-based CLI tool that monitors a local source directory (e.g., an analytics engine or any codebase), computes cryptographic file hashes, maintains a persistent state database, and **only uploads files that actually changed**—Added, Modified, or Deleted—to Azure Blob Storage. It also supports **downloading deltas** from Blob to keep a local workspace in sync. It minimizes network I/O, reduces storage costs, and guarantees integrity through end-to-end MD5 verification.
 
 ---
 
@@ -22,6 +22,7 @@
 - [Usage](#usage)
   - [A) Rebase Files Details](#a-rebase-files-details)
   - [B) Upload Files Delta](#b-upload-files-delta)
+  - [C) Download Files Delta](#c-download-files-delta)
 - [Project Structure](#project-structure)
 - [How It Works](#how-it-works)
 - [Database Schema](#database-schema)
@@ -40,7 +41,8 @@ Modern development workflows often require syncing large codebases across distri
 2. **Persisting hashes** in a local SQLite database and a portable JSON snapshot.
 3. **Comparing current state** against the last known state to detect *deltas*.
 4. **Uploading only the delta** (added/modified files) to Azure Blob Storage.
-5. **Verifying integrity** at every step using blob-level content MD5 checks.
+5. **Downloading deltas** from Azure Blob to synchronize a local workspace.
+6. **Verifying integrity** at every step using blob-level content MD5 checks.
 
 ---
 
@@ -50,11 +52,12 @@ Modern development workflows often require syncing large codebases across distri
 |---------|-------------|
 | **Delta Detection** | Identifies Added, Modified, and Deleted files by comparing MD5 hashes against historical state. |
 | **Selective Upload** | Only changed files are uploaded to Azure Blob—saving bandwidth and time. |
-| **Integrity Verification** | Every upload/download is validated using MD5 checksums. |
+| **Selective Download** | Downloads only the delta files from Blob and applies Add, Modified, and Delete operations locally. |
+| **Integrity Verification** | Every upload/download is validated using MD5 checksums and file-size checks. |
 | **SQLite Ledger** | Local `AnalysisFileHash.db` maintains full audit history (status, timestamps, sizes). |
 | **JSON Snapshot** | `FileHashDetails.json` acts as a lightweight, portable state snapshot synced to Blob. |
 | **Smart Exclusions** | Automatically ignores `node_modules`, `__pycache__`, `.git`, `.venv`, lock files, and dotenv files. |
-| **Two Operation Modes** | **Rebase** for clean slate initialization; **Upload** for incremental updates. |
+| **Three Operation Modes** | **Rebase** for clean slate initialization; **Upload** for incremental updates; **Download** for local sync. |
 | **Step-Level Observability** | Every operation returns a structured dict (`status`, `script_name`, `step`, `message`) for precise error tracing. |
 
 ---
@@ -62,40 +65,41 @@ Modern development workflows often require syncing large codebases across distri
 ## Architecture
 
 ```
-┌──────────────────────┐
-│   Source Codebase    │
-│ (Analytics Engine)   │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│   File-Delta-To-BLOB │
-│  ┌────────────────┐  │
-│  │  MD5 Hashing   │  │
-│  │  + Filtering   │  │
-│  └────────────────┘  │
-│           │          │
-│           ▼          │
-│  ┌────────────────┐  │
+┌──────────────────────┐         ┌──────────────────────┐
+│   Source Codebase    │◄────────│   Source Codebase    │
+│ (Analytics Engine)   │  Sync   │ (Another Workstation)│
+└──────────┬───────────┘         └──────────┬───────────┘
+           │                                ▲
+           │ Upload                         │ Download
+           ▼                                │
+┌──────────────────────┐                    │
+│   File-Delta-To-BLOB │                    │
+│  ┌────────────────┐  │                    │
+│  │  MD5 Hashing   │  │                    │
+│  │  + Filtering   │  │                    │
+│  └────────────────┘  │                    │
+│           │          │                    │
+│           ▼          │                    │
+│  ┌────────────────┐  │                    │
 │  │ SQLite Database│  │  ← analysis_file_hash table
-│  │FileHashDetails │  │
+│  │FileHashDetails │  │                    │
 │  │     .json      │  │  ← portable snapshot
-│  └────────────────┘  │
-│           │          │
-│           ▼          │
-│  ┌────────────────┐  │
+│  └────────────────┘  │                    │
+│           │          │                    │
+│           ▼          │                    │
+│  ┌────────────────┐  │                    │
 │  │  Delta Engine  │  │  ← Detect Added / Modified / Deleted
-│  └────────────────┘  │
-│           │          │
-│           ▼          │
-│  ┌────────────────┐  │
-│  │ FilesDeltaStore│  │  ← staging folder for uploads
-│  └────────────────┘  │
-└──────────┬───────────┘
-           │ Azure Blob Storage API
-           ▼
-┌──────────────────────┐
-│    Azure Blob        │
+│  └────────────────┘  │                    │
+│           │          │                    │
+│           ▼          │                    │
+│  ┌────────────────┐  │                    │
+│  │ FilesDeltaStore│  │  ← staging folder for uploads/downloads
+│  └────────────────┘  │                    │
+└──────────┬───────────┘                    │
+           │ Azure Blob Storage API         │
+           ▼                                │
+┌──────────────────────┐                    │
+│    Azure Blob        │────────────────────┘
 │   FilesDeltaStore/   │
 │  FileHashDetails.json│
 └──────────────────────┘
@@ -137,7 +141,13 @@ pip install -e "."
 
 ## Configuration
 
-Create a `.env` file in the project root (or modify the existing one):
+Copy `.env.example` to `.env` and fill in your Azure credentials:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
 
 ```dotenv
 BLOB_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
@@ -172,6 +182,7 @@ You will be presented with an interactive menu:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [A] -> Rebase Files Details
 [B] -> Upload Files Delta
+[C] -> Download Files Delta
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Please Enter Your Choice:
 ```
@@ -208,14 +219,38 @@ Please Enter Your Choice:
    - **Added** — new files not in the previous snapshot.
    - **Modified** — files whose MD5 hash changed.
    - **Deleted** — files present in the snapshot but missing locally.
-5. Stages added/modified files into the `FilesDeltaStore/` folder.
-6. Upserts all changes into the SQLite database using `INSERT OR REPLACE`.
-7. Updates the JSON snapshot with new states.
-8. Uploads the delta files and the updated JSON snapshot to Azure Blob.
+5. Clears the Azure Blob container (including the old snapshot).
+6. Stages added/modified files into the `FilesDeltaStore/` folder.
+7. Upserts all changes into the SQLite database using `INSERT OR REPLACE`.
+8. Updates the JSON snapshot with new states.
+9. Uploads the delta files and the updated JSON snapshot to Azure Blob.
 
 **When to use:**
 - Daily development workflows after code changes.
 - CI/CD pipelines that need to publish only artifacts that changed.
+
+### C) Download Files Delta
+
+**Purpose:** Download the latest delta from Azure Blob and apply it to the local codebase.
+
+**What it does:**
+1. Validates that the local environment, database, and JSON snapshot are present.
+2. Deletes and recreates the local `FilesDeltaStore/` staging folder.
+3. Downloads the remote `FileHashDetails.json` from Azure Blob.
+4. Compares the remote snapshot against the local snapshot to compute deltas:
+   - **Add** — files present in Blob but missing locally.
+   - **Modified** — files whose remote hash differs from the local hash.
+   - **Delete** — files present locally but missing in Blob.
+5. Downloads the actual delta files from Azure Blob into `FilesDeltaStore/`.
+6. **Applies changes locally:**
+   - **Add** — copies new files from `FilesDeltaStore/` to the analysis engine (verifies size + MD5 after copy).
+   - **Modified** — deletes the old local file, then copies the new version from `FilesDeltaStore/` (verifies size + MD5).
+   - **Delete** — removes the file from the local analysis engine.
+
+**When to use:**
+- Setting up a new workstation with the latest codebase state.
+- Pulling down changes published by another developer or CI/CD pipeline.
+- Recovering a local workspace to match the remote Blob state.
 
 ---
 
@@ -226,27 +261,26 @@ File-Delta-To-BLOB/
 ├── main.py                              # CLI entry point (interactive menu)
 ├── pyproject.toml                       # Project metadata & dependencies
 ├── .env                                 # Azure credentials (not committed)
+├── .env.example                         # Example environment variables (safe to commit)
 ├── .gitignore
 ├── .python-version                      # Pin to Python 3.12
+├── LICENSE                              # MIT License
 ├── README.md
 ├── uv.lock                              # uv lockfile for reproducible installs
 │
 ├── database/                            # Runtime-generated SQLite DB
 │   └── AnalysisFileHash.db
-├── FilesDeltaStore/                     # Staging folder for delta uploads
+├── FilesDeltaStore/                     # Staging folder for delta uploads/downloads
 │   └── ...
 ├── FileHashDetails.json                 # Portable hash snapshot (runtime-generated)
 │
 └── supportscript/                       # Modular operation scripts
     ├── rebasefilesdetails.py            # Full rebase: scan, hash, create DB/JSON, upload
     ├── uploadfilesdelta.py              # Incremental upload orchestrator
-    ├── filedetailscompare.py            # Download remote JSON and validate against local
-    ├── localfiledetailsupdate.py        # Detect Added/Modified/Deleted; stage files; update DB/JSON
-    ├── localfileprocess.py              # (WIP stub — currently unimplemented)
+    ├── downloadfilesdelta.py            # Download remote delta and apply to local workspace
+    ├── localfileprocess.py              # Local file add/modify/delete with integrity verification
     └── blobfilesoperation.py            # Unified Azure Blob operations: upload, download, clear
 ```
-
-
 
 ---
 
@@ -263,41 +297,66 @@ Each tracked file can be in one of four states:
 | `Modified` | File exists but its MD5 hash differs from the recorded hash. |
 | `Deleted` | File existed in the snapshot but is no longer present locally. |
 
-### Hash Comparison Flow
+### Upload Hash Comparison Flow
 
 ```
 Last Known State (DB/JSON)     Current File System
-        │                              │
-        ▼                              ▼
-   file_path: hash              file_path: hash
-        │                              │
-        └──────────┬───────────────────┘
-                   │
-            ┌──────┴──────┐
-            │   Compare   │
-            └──────┬──────┘
-                   │
-     ┌─────────────┼─────────────┐
-     ▼             ▼             ▼
-   Not Found    Different     Identical
-     │             │             │
-     ▼             ▼             ▼
-   Deleted      Modified      Original
-   (DB update)  (Stage +      (Skip)
-                Upload +
-                DB update)
+         │                              │
+         ▼                              ▼
+    file_path: hash              file_path: hash
+         │                              │
+         └──────────┬───────────────────┘
+                    │
+             ┌──────┴──────┐
+             │   Compare   │
+             └──────┬──────┘
+                    │
+      ┌─────────────┼─────────────┐
+      ▼             ▼             ▼
+    Not Found    Different     Identical
+      │             │             │
+      ▼             ▼             ▼
+    Deleted      Modified      Original
+    (DB update)  (Stage +      (Skip)
+                 Upload +
+                 DB update)
+```
+
+### Download Delta Flow
+
+```
+Remote Blob Snapshot            Local Snapshot
+         │                              │
+         ▼                              ▼
+    file_path: hash              file_path: hash
+         │                              │
+         └──────────┬───────────────────┘
+                    │
+             ┌──────┴──────┐
+             │   Compare   │
+             └──────┬──────┘
+                    │
+      ┌─────────────┼─────────────┐
+      ▼             ▼             ▼
+    Not Found    Different     Identical
+      │             │             │
+      ▼             ▼             ▼
+    Delete       Modified      Skip
+    (local)      (download +   (no action)
+                 replace)
 ```
 
 ### Integrity Guarantees
 
 - **Upload:** The `Content-MD5` header is set on every blob. After upload, the tool queries blob properties and ensures the remote MD5 matches the local MD5.
 - **Download:** After downloading from Blob, the tool re-computes the local MD5 and compares it to the blob's recorded `Content-MD5`.
+- **Local Apply:** After copying a downloaded file into the analysis engine, the tool verifies both file size and MD5 hash match the source in `FilesDeltaStore/`.
 
 ### Blob Path Conventions
 
 | File Type | Blob Path |
 |-----------|-----------|
-| Delta files (added/modified) | `FilesDeltaStore/<filename>` |
+| Delta files (added/modified) | `FilesDeltaStore/<relative_path>` |
 | Hash snapshot | `FileHashDetails.json` (root of container) |
 
 ---
@@ -336,22 +395,16 @@ CREATE TABLE IF NOT EXISTS analysis_file_hash (
 The following behaviors are present in the current codebase and should be understood before production use:
 
 1. **Hardcoded source path**  
-   `analysis_engine_folder_path` is hardcoded as an absolute path in `main.py` (line 33). You must edit the source code to point to your own directory.
+   `analysis_engine_folder_path` is hardcoded as an absolute path in `main.py` (line 34). You must edit the source code to point to your own directory.
 
-2. **Container-wide deletion on every upload**  
-       `blobfilesoperation.py` (`file_upload_to_blob`) deletes **all existing blobs** in the container before uploading a single file when `blobs_delete=True`. When `uploadfilesdelta.py` loops over multiple delta files, the container is wiped for each file upload. This means with the current logic, after an upload operation only the JSON snapshot may remain in Blob. **This is a critical behavior that needs architectural correction.**
+2. **Container-wide deletion on rebase**  
+   `rebasefilesdetails.py` clears **all** files from the Azure Blob container during a rebase. While the upload flow now clears the container once before re-uploading deltas, a rebase is still inherently destructive to remote state.
 
-3. **Unimplemented stub module**  
-   `localfileprocess.py` exists as a placeholder but contains no actual logic.
-
-4. **No formal CLI framework**  
+3. **No formal CLI framework**  
    The tool relies on interactive `input()` rather than command-line arguments, making it unsuitable for non-interactive automation (e.g., cron, CI/CD) without piping input.
 
-5. **No unit or integration tests**  
+4. **No unit or integration tests**  
    There are currently no automated tests. Validation is entirely manual.
-
-6. **Memory usage on upload**  
-    While most MD5 calculations use 4 MB chunked reads, `blobfilesoperation.py` (`file_upload_to_blob`) reads the entire file into memory at once (`local_file_data.read()`) for its own hash calculation. Very large files may cause memory spikes.
 
 ---
 
@@ -359,14 +412,14 @@ The following behaviors are present in the current codebase and should be unders
 
 This project is under active development. The following items are planned or in-progress:
 
-- [ ] **Fix container-wipe bug**: Decouple blob deletion from the per-file upload routine so delta uploads are additive rather than destructive.
+- [x] **Implement `localfileprocess.py`** — Local file transformations (add, modify, delete) with size + MD5 verification. *(Completed)*
+- [x] **Implement `downloadfilesdelta.py`** — Download remote delta and apply to local workspace. *(Completed)*
+- [x] **Add LICENSE and `.env.example`** — Standardize the repository for contributors. *(Completed)*
 - [ ] **Configuration-driven source path**: Move `analysis_engine_folder_path` to `.env` or a `config.yaml` instead of hardcoding it.
-- [ ] **Complete `localfileprocess.py`**: Implement auxiliary local file transformations (e.g., minification, compression) before upload.
 - [ ] **Deleted file artifact handling**: Generate deletion manifests or tombstone files for downstream consumers.
 - [ ] **Parallel uploads/downloads**: Leverage `asyncio` or threading to speed up Blob transfers for large delta sets.
 - [ ] **Retention policies**: Auto-clean old `FileHashDetails.json` versions in Blob.
 - [ ] **CLI argument parsing**: Replace interactive `input()` with a proper CLI framework (e.g., `argparse`, `typer`, or `click`) for automation-friendly usage.
-- [ ] **Unified chunked hashing**: Ensure `blobfilesoperation.py` (`file_upload_to_blob`) also uses 4 MB chunked reads for consistency and memory efficiency.
 - [ ] **Comprehensive logging**: Replace `print()` statements with Python's `logging` module for configurable log levels and file output.
 - [ ] **Unit & integration tests**: Add pytest suites for hash computation, delta detection, and mock Azure Blob interactions.
 - [ ] **Docker support**: Provide a `Dockerfile` and `docker-compose.yml` for containerized execution.
@@ -389,7 +442,9 @@ Please ensure any new features include appropriate logging steps and maintain th
 
 ## License
 
-This project is provided as-is for demonstration and development purposes. You may add an open-source license of your choice (e.g., MIT, Apache-2.0) once finalized.
+See [LICENSE](./LICENSE) for details.
+
+This project is licensed under the MIT License.
 
 ---
 
