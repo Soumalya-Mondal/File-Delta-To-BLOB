@@ -65,4 +65,33 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '6', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Download-Files-Delta', 'step': '6', 'message': 'Download Files Delta Completed Successfully'}
+    # Compare BLOB And Local File Hash Details And Categorize By File Status:S7
+    try:
+        add_files_details = {}
+        modified_files_details = {}
+        delete_files_details = {}
+
+        # Identify Added And Modified Files From BLOB
+        for file_path, blob_file_details in blob_file_hash_details_json_object.items():
+            local_file_details = local_file_hash_details_json_object.get(file_path)
+            if local_file_details is None:
+                # File exists in BLOB but not in local -> Add
+                add_files_details[file_path] = dict(blob_file_details)
+                add_files_details[file_path]['file_status'] = 'Add'
+            else:
+                # File exists in both -> check if hash changed
+                if blob_file_details.get('file_hash_value') != local_file_details.get('file_hash_value'):
+                    modified_files_details[file_path] = dict(blob_file_details)
+                    modified_files_details[file_path]['file_status'] = 'Modified'
+
+        # Identify Deleted Files From Local (not in BLOB)
+        for file_path, local_file_details in local_file_hash_details_json_object.items():
+            if file_path not in blob_file_hash_details_json_object:
+                delete_files_details[file_path] = dict(local_file_details)
+                delete_files_details[file_path]['file_status'] = 'Delete'
+
+        print(f'{"[INFO]":<10} Total Added Files Details Created: {len(add_files_details)}')
+        print(f'{"[INFO]":<10} Total Modified Files Details Created: {len(modified_files_details)}')
+        print(f'{"[INFO]":<10} Total Deleted Files Details Created: {len(delete_files_details)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '7', 'message': str(error)}
