@@ -1,12 +1,5 @@
 # Define "blob_files_operation" Function
-def blob_files_operation(
-    operation: str,
-    env_file_path: str,
-    files_delta_store_folder_path: str | None = None,
-    file_hash_download: bool = False,
-    upload_file_path: str | None = None,
-    hash_file_delete: bool = False
-) -> dict[str, str]: #type: ignore
+def blob_files_operation(operation: str, env_file_path: str, files_delta_store_folder_path: str | None = None, file_hash_download: bool = False, upload_file_path: str | None = None, hash_file_delete: bool = False) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
