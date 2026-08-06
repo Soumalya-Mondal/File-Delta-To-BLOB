@@ -269,16 +269,32 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '19', 'message': str(error)}
 
-    # Upload JSON Dump File To Azure BLOB Container:S20
+    # Update JSON Dump File With Added, Modified And Deleted File Details:S20
     try:
-        json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path, blobs_delete = False)
-        if json_upload_result.get('status') != 'SUCCESS':
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '20', 'message': f'Failed To Upload JSON Dump File: {json_upload_result.get("message")}'}
-        print(f'{"[INFO]":<10} JSON Dump File Uploaded To Azure BLOB: "{Path(json_dump_file_path).name}"')
+        with open(json_dump_file_path, 'r', encoding = 'utf-8') as json_file:
+            json_dump_data = json.load(json_file)
+        json_dump_data.update(added_file_hash_details_dict)
+        json_dump_data.update(modified_file_hash_details_dict)
+        json_dump_data.update(deleted_file_hash_details_dict)
+        with open(json_dump_file_path, 'w', encoding = 'utf-8') as json_file:
+            json.dump(json_dump_data, json_file, indent = 2)
+        print(f'{"[INFO]":<10} JSON Dump File Updated With Added, Modified And Deleted File Details: "{Path(json_dump_file_path).name}"')
+        print(f'{"[INFO]":<10} Total Added File Details Updated In JSON Dump File: {len(added_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(deleted_file_hash_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '20', 'message': str(error)}
 
-    # Insert Or Update Added File Details Into Database:S21
+    # Upload JSON Dump File To Azure BLOB Container:S21
+    try:
+        json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path, blobs_delete = False)
+        if json_upload_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': f'Failed To Upload JSON Dump File: {json_upload_result.get("message")}'}
+        print(f'{"[INFO]":<10} JSON Dump File Uploaded To Azure BLOB: "{Path(json_dump_file_path).name}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': str(error)}
+
+    # Insert Or Update Added File Details Into Database:S22
     try:
         database_connection = sqlite3.connect(database_file_path)
         database_cursor = database_connection.cursor()
@@ -293,9 +309,9 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         database_connection.close()
         print(f'{"[INFO]":<10} Total Added File Details Upserted Into Database: {total_added_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '22', 'message': str(error)}
 
-    # Insert Or Update Modified File Details Into Database:S22
+    # Insert Or Update Modified File Details Into Database:S23
     try:
         database_connection = sqlite3.connect(database_file_path)
         database_cursor = database_connection.cursor()
@@ -310,9 +326,9 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         database_connection.close()
         print(f'{"[INFO]":<10} Total Modified File Details Upserted Into Database: {total_modified_upserted}')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '22', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '23', 'message': str(error)}
 
-    # Insert Or Update Deleted File Details Into Database:S23
+    # Insert Or Update Deleted File Details Into Database:S24
     try:
         database_connection = sqlite3.connect(database_file_path)
         database_cursor = database_connection.cursor()
@@ -326,22 +342,6 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         database_connection.commit()
         database_connection.close()
         print(f'{"[INFO]":<10} Total Deleted File Details Upserted Into Database: {total_deleted_upserted}')
-    except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '23', 'message': str(error)}
-
-    # Update JSON Dump File With Added, Modified And Deleted File Details:S24
-    try:
-        with open(json_dump_file_path, 'r', encoding = 'utf-8') as json_file:
-            json_dump_data = json.load(json_file)
-        json_dump_data.update(added_file_hash_details_dict)
-        json_dump_data.update(modified_file_hash_details_dict)
-        json_dump_data.update(deleted_file_hash_details_dict)
-        with open(json_dump_file_path, 'w', encoding = 'utf-8') as json_file:
-            json.dump(json_dump_data, json_file, indent = 2)
-        print(f'{"[INFO]":<10} JSON Dump File Updated With Added, Modified And Deleted File Details: "{Path(json_dump_file_path).name}"')
-        print(f'{"[INFO]":<10} Total Added File Details Updated In JSON Dump File: {len(added_file_hash_details_dict)}')
-        print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_file_hash_details_dict)}')
-        print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(deleted_file_hash_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '24', 'message': str(error)}
 
