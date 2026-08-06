@@ -260,7 +260,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     try:
         print(f'{"[INFO]":<10} Total Files Ready For Upload To Azure BLOB: {len(files_to_upload_list)}')
         for upload_file_path in files_to_upload_list:
-            upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = upload_file_path, blobs_delete = False)
+            upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = upload_file_path)
             if upload_result.get('status') != 'SUCCESS':
                 return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '19', 'message': f'Failed To Upload File "{Path(upload_file_path).name}": {upload_result.get("message")}'}
         print(f'{"[INFO]":<10} Total Files Uploaded To Azure BLOB: {len(files_to_upload_list)}')
@@ -285,7 +285,7 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
 
     # Upload JSON Dump File To Azure BLOB Container:S21
     try:
-        json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path, blobs_delete = False)
+        json_upload_result = file_upload_to_blob(env_file_path = env_file_path, upload_file_path = json_dump_file_path)
         if json_upload_result.get('status') != 'SUCCESS':
             return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': f'Failed To Upload JSON Dump File: {json_upload_result.get("message")}'}
         print(f'{"[INFO]":<10} JSON Dump File Uploaded To Azure BLOB: "{Path(json_dump_file_path).name}"')

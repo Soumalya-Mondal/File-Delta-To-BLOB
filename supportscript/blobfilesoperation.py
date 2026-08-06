@@ -123,7 +123,7 @@ def file_download_from_blob(env_file_path: str, files_delta_store_folder_path: s
 
 
 # Define "file_upload_to_blob" Function
-def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete: bool = False) -> dict[str, str]: #type: ignore
+def file_upload_to_blob(env_file_path: str, upload_file_path: str) -> dict[str, str]: #type: ignore
     # Importing Python Module:S1
     try:
         from pathlib import Path
@@ -173,16 +173,7 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete:
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '5', 'message': str(error)}
 
-    # Delete All Existing BLOBs From Container:S6
-    if blobs_delete:
-        try:
-            for blob_file_path in blob_container_client.list_blobs():
-                blob_container_client.delete_blob(blob_file_path.name)
-            print(f'{"[INFO]":<10} All Existing BLOBs Deleted From Container')
-        except Exception as error:
-            return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '6', 'message': str(error)}
-
-    # Upload File To Azure BLOB:S7
+    # Upload File To Azure BLOB:S6
     try:
         if upload_file_path_object.name == 'FileHashDetails.json':
             upload_file_blob_client = blob_container_client.get_blob_client(upload_file_path_object.name)
@@ -204,18 +195,18 @@ def file_upload_to_blob(env_file_path: str, upload_file_path: str, blobs_delete:
             )
         print(f'{"[INFO]":<10} File Uploaded To BLOB: "{Path(upload_file_blob_client.blob_name).name}"')
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '7', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '6', 'message': str(error)}
 
-    # Verify Uploaded File Size And MD5:S8
+    # Verify Uploaded File Size And MD5:S7
     try:
         blob_properties = upload_file_blob_client.get_blob_properties()
         if (upload_file_size == blob_properties.size) and (upload_file_hash_bytes == blob_properties.content_settings.content_md5):
             print(f'{"[INFO]":<10} Uploaded File Size And MD5 Verified Successfully')
-            return {'status': 'SUCCESS', 'script_name': 'BLOB-Files-Operation', 'step': '8', 'message': 'File Uploaded And Verified Successfully'}
+            return {'status': 'SUCCESS', 'script_name': 'BLOB-Files-Operation', 'step': '7', 'message': 'File Uploaded And Verified Successfully'}
         else:
-            return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '8', 'message': 'Uploaded File Size Or MD5 Verification Failed'}
+            return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '7', 'message': 'Uploaded File Size Or MD5 Verification Failed'}
     except Exception as error:
-        return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '8', 'message': str(error)}
+        return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '7', 'message': str(error)}
 
 
 # Define "files_clear_from_blob" Function
