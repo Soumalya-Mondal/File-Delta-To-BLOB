@@ -8,7 +8,6 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
         import sqlite3
         import hashlib
         from datetime import datetime
-        from supportscript.persistfiledetailsupdate import persist_file_details_update
         from supportscript.fileuploadtoblob import file_upload_to_blob
         from supportscript.filedownloadfromblob import file_download_from_blob
         from supportscript.fliesclearefromblob import files_clear_from_blob
@@ -70,8 +69,6 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     # Load JSON Dump File From Local:S6
     try:
         json_dump_file_path_object = Path(json_dump_file_path)
-        if not json_dump_file_path_object.exists() or not json_dump_file_path_object.is_file():
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '6', 'message': f'JSON Dump File From Local Not Found Or Not A File: "{Path(json_dump_file_path).name}"'}
         with open(json_dump_file_path_object, 'r', encoding = 'utf-8') as json_dump_file_object:
             json_dump_json_data_from_local = json.load(json_dump_file_object)
         print(f'{"[INFO]":<10} JSON Dump File From Local Loaded: "{json_dump_file_path_object.name}"')
@@ -281,19 +278,71 @@ def upload_files_delta(env_file_path: str, database_file_path: str, json_dump_fi
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '20', 'message': str(error)}
 
-    # Persist Local File Details After Successful Upload:S21
+    # Insert Or Update Added File Details Into Database:S21
     try:
-        persist_result = persist_file_details_update(
-            database_file_path = database_file_path,
-            json_dump_file_path = json_dump_file_path,
-            added_file_hash_details_dict = added_file_hash_details_dict,
-            modified_file_hash_details_dict = modified_file_hash_details_dict,
-            deleted_file_hash_details_dict = deleted_file_hash_details_dict
-        )
-        if persist_result.get('status') != 'SUCCESS':
-            return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': f'Failed To Persist Local File Details: {persist_result.get("message")}'}
-        print(f'{"[INFO]":<10} Local File Details Persisted Successfully')
+        database_connection = sqlite3.connect(database_file_path)
+        database_cursor = database_connection.cursor()
+        total_added_upserted = 0
+        for file_path, file_hash_details in added_file_hash_details_dict.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_added_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Added File Details Upserted Into Database: {total_added_upserted}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': str(error)}
 
-    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '21', 'message': 'Upload Files Delta Completed Successfully'}
+    # Insert Or Update Modified File Details Into Database:S22
+    try:
+        database_connection = sqlite3.connect(database_file_path)
+        database_cursor = database_connection.cursor()
+        total_modified_upserted = 0
+        for file_path, file_hash_details in modified_file_hash_details_dict.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_modified_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Modified File Details Upserted Into Database: {total_modified_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '22', 'message': str(error)}
+
+    # Insert Or Update Deleted File Details Into Database:S23
+    try:
+        database_connection = sqlite3.connect(database_file_path)
+        database_cursor = database_connection.cursor()
+        total_deleted_upserted = 0
+        for file_path, file_hash_details in deleted_file_hash_details_dict.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_deleted_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Deleted File Details Upserted Into Database: {total_deleted_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '23', 'message': str(error)}
+
+    # Update JSON Dump File With Added, Modified And Deleted File Details:S24
+    try:
+        with open(json_dump_file_path, 'r', encoding = 'utf-8') as json_file:
+            json_dump_data = json.load(json_file)
+        json_dump_data.update(added_file_hash_details_dict)
+        json_dump_data.update(modified_file_hash_details_dict)
+        json_dump_data.update(deleted_file_hash_details_dict)
+        with open(json_dump_file_path, 'w', encoding = 'utf-8') as json_file:
+            json.dump(json_dump_data, json_file, indent = 2)
+        print(f'{"[INFO]":<10} JSON Dump File Updated With Added, Modified And Deleted File Details: "{Path(json_dump_file_path).name}"')
+        print(f'{"[INFO]":<10} Total Added File Details Updated In JSON Dump File: {len(added_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_file_hash_details_dict)}')
+        print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(deleted_file_hash_details_dict)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Upload-Files-Delta', 'step': '24', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Upload-Files-Delta', 'step': '24', 'message': 'Upload Files Delta Completed Successfully'}
