@@ -7,7 +7,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
         import hashlib
         import json
         from datetime import datetime
-        from supportscript.blobfilesoperation import file_upload_to_blob, files_clear_from_blob
+        from supportscript.blobfilesoperation import blob_files_operation
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '1', 'message': str(error)}
 
@@ -26,7 +26,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
 
     # Clear Files From Azure BLOB Container:S3
     try:
-        blob_clear_result = files_clear_from_blob(env_file_path = str(env_file_path), hash_file_delete = True)
+        blob_clear_result = blob_files_operation(operation = 'clear', env_file_path = str(env_file_path), hash_file_delete = True)
         if blob_clear_result.get('status') != 'SUCCESS':
             return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '3', 'message': str(blob_clear_result)}
         print(f'{"[INFO]":<10} Azure BLOB Container Cleared Including "FileHashDetails.json"')
@@ -134,7 +134,7 @@ def rebase_files_details(env_file_path: str, database_file_path: str, json_dump_
 
     # Upload File Hash Details JSON To Azure BLOB:S10
     try:
-        file_upload_result = file_upload_to_blob(str(env_file_path), str(json_dump_file_path_object))
+        file_upload_result = blob_files_operation(operation = 'upload', env_file_path = str(env_file_path), upload_file_path = str(json_dump_file_path_object))
         if file_upload_result.get('status') != 'SUCCESS':
             return {'status': 'ERROR', 'script_name': 'Rebase-Files-Details', 'step': '10', 'message': str(file_upload_result)}
         print(f'{"[INFO]":<10} File Hash Details JSON Uploaded To Azure BLOB: "{json_dump_file_path_object.name}"')

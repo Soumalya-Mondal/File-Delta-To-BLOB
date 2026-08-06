@@ -5,7 +5,7 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         from pathlib import Path
         import shutil
         import json
-        from supportscript.blobfilesoperation import file_download_from_blob
+        from supportscript.blobfilesoperation import blob_files_operation
         from supportscript.localfileprocess import local_file_process
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '1', 'message': str(error)}
@@ -38,7 +38,8 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
 
     # Download File Hash Details From Azure BLOB:S4
     try:
-        file_hash_download_result = file_download_from_blob(
+        file_hash_download_result = blob_files_operation(
+            operation = 'download',
             env_file_path = env_file_path,
             files_delta_store_folder_path = files_delta_store_folder_path,
             file_hash_download = True
@@ -99,7 +100,8 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
 
     # Download Actual Files From Azure BLOB:S8
     try:
-        file_download_result = file_download_from_blob(
+        file_download_result = blob_files_operation(
+            operation = 'download',
             env_file_path = env_file_path,
             files_delta_store_folder_path = files_delta_store_folder_path,
             file_hash_download = False
