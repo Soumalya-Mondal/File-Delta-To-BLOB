@@ -1,5 +1,5 @@
 # Define "local_file_process" Function
-def local_file_process(files_delta_store_folder_object_path: str, analysis_engine_folder_object_path: str, file_path: str, job_type: str) -> dict[str, str]: #type: ignore
+def local_file_process(files_delta_store_folder_path: str, analysis_engine_folder_path: str, file_path: str, job_type: str) -> dict[str, str]: #type: ignore
     # Importing Pythn Module:S1
     try:
         from pathlib import Path
@@ -10,8 +10,8 @@ def local_file_process(files_delta_store_folder_object_path: str, analysis_engin
 
     # Check Folder Paths:S2
     try:
-        files_delta_store_folder_object = Path(files_delta_store_folder_object_path)
-        analysis_engine_folder_object = Path(analysis_engine_folder_object_path)
+        files_delta_store_folder_object = Path(files_delta_store_folder_path)
+        analysis_engine_folder_object = Path(analysis_engine_folder_path)
 
         if not (files_delta_store_folder_object.exists() and files_delta_store_folder_object.is_dir()):
             return {'status': 'ERROR', 'script_name': 'Local-File-Process', 'step': '2', 'message': f'Files Delta Store Folder Path Does Not Exist Or Is Not A Directory: "{files_delta_store_folder_object.name}"'}

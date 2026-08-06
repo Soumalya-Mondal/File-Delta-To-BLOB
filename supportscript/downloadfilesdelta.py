@@ -6,6 +6,7 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         import shutil
         import json
         from supportscript.filedownloadfromblob import file_download_from_blob
+        from supportscript.localfileprocess import local_file_process
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '1', 'message': str(error)}
 
@@ -95,3 +96,61 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         print(f'{"[INFO]":<10} Total Deleted Files Details Created: {len(delete_files_details)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '7', 'message': str(error)}
+
+    # Download Actual Files From Azure BLOB:S8
+    try:
+        file_download_result = file_download_from_blob(
+            env_file_path = env_file_path,
+            files_delta_store_folder_path = files_delta_store_folder_path,
+            file_hash_download = False
+        )
+        if file_download_result.get('status') != 'SUCCESS':
+            return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '8', 'message': f'Failed To Download Actual Files: {file_download_result.get("message")}'}
+        print(f'{"[INFO]":<10} Actual Files Downloaded From Azure BLOB')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '8', 'message': str(error)}
+
+    # Process Added Files:S9
+    try:
+        for file_path, _ in add_files_details.items():
+            add_process_result = local_file_process(
+                files_delta_store_folder_path = files_delta_store_folder_path,
+                analysis_engine_folder_path = str(analysis_engine_folder_path),
+                file_path = file_path,
+                job_type = 'add'
+            )
+            if add_process_result.get('status') != 'SUCCESS':
+                return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '9', 'message': f'Failed To Process Added File "{file_path}": {add_process_result.get("message")}'}
+        print(f'{"[INFO]":<10} All Added Files Processed Successfully: Total="{len(add_files_details)}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '9', 'message': str(error)}
+
+    # Process Modified Files:S10
+    try:
+        for file_path, _ in modified_files_details.items():
+            modified_process_result = local_file_process(
+                files_delta_store_folder_path = files_delta_store_folder_path,
+                analysis_engine_folder_path = str(analysis_engine_folder_path),
+                file_path = file_path,
+                job_type = 'modified'
+            )
+            if modified_process_result.get('status') != 'SUCCESS':
+                return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '10', 'message': f'Failed To Process Modified File "{file_path}": {modified_process_result.get("message")}'}
+        print(f'{"[INFO]":<10} All Modified Files Processed Successfully: Total="{len(modified_files_details)}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '10', 'message': str(error)}
+
+    # Process Deleted Files:S11
+    try:
+        for file_path, _ in delete_files_details.items():
+            delete_process_result = local_file_process(
+                files_delta_store_folder_path = files_delta_store_folder_path,
+                analysis_engine_folder_path = str(analysis_engine_folder_path),
+                file_path = file_path,
+                job_type = 'delete'
+            )
+            if delete_process_result.get('status') != 'SUCCESS':
+                return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '11', 'message': f'Failed To Process Deleted File "{file_path}": {delete_process_result.get("message")}'}
+        print(f'{"[INFO]":<10} All Deleted Files Processed Successfully: Total="{len(delete_files_details)}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '11', 'message': str(error)}
