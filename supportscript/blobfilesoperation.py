@@ -29,7 +29,7 @@ def blob_files_operation(operation: str, env_file_path: str, files_delta_store_f
         if files_delta_store_folder_path_object.exists():
             shutil.rmtree(files_delta_store_folder_path_object)
             print(f'{"[INFO]":<10} Folder Deleted: "{files_delta_store_folder_path_object.name}"')
-        files_delta_store_folder_path_object.mkdir(parents=True, exist_ok=True)
+        files_delta_store_folder_path_object.mkdir(parents = True, exist_ok = True)
         print(f'{"[INFO]":<10} Folder Created: "{files_delta_store_folder_path_object.name}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '3', 'message': str(error)}
@@ -41,7 +41,7 @@ def blob_files_operation(operation: str, env_file_path: str, files_delta_store_f
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '4', 'message': str(error)}
 
-    # Execute Requested BLOB Operation
+    # Execute "download" Operation
     if operation == 'download':
         # Fetch Blob List From Azure BLOB Container:S5
         try:
@@ -78,7 +78,7 @@ def blob_files_operation(operation: str, env_file_path: str, files_delta_store_f
                     blob_name = 'FileHashDetails.json'
                 else:
                     blob_name = f'FilesDeltaStore/{local_file_path.relative_to(files_delta_store_folder_path_object).as_posix()}'
-                local_file_path.parent.mkdir(parents=True, exist_ok=True)
+                local_file_path.parent.mkdir(parents = True, exist_ok = True)
                 with open(local_file_path, 'wb') as local_file_data:
                     local_file_data.write(blob_container_client.get_blob_client(blob_name).download_blob().readall())
                 blob_properties = blob_container_client.get_blob_client(blob_name).get_blob_properties()
@@ -121,6 +121,7 @@ def blob_files_operation(operation: str, env_file_path: str, files_delta_store_f
         except Exception as error:
             return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '9', 'message': str(error)}
 
+    # Execute "upload" Operation
     elif operation == 'upload':
         # Pre-Validation And Setup For Upload:S10
         try:
@@ -129,19 +130,22 @@ def blob_files_operation(operation: str, env_file_path: str, files_delta_store_f
             upload_file_path_object = Path(upload_file_path)
             if not (upload_file_path_object.exists() and upload_file_path_object.is_file()):
                 return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '10', 'message': 'Upload File Not Found Or Not A File'}
-            md5_hash = hashlib.md5()
-            with open(upload_file_path_object, 'rb') as local_file_data:
-                while chunk := local_file_data.read(4 * 1024 * 1024):
-                    md5_hash.update(chunk)
-            upload_file_hash_value = md5_hash.hexdigest()
-            upload_file_hash_bytes = md5_hash.digest()
-            upload_file_size = upload_file_path_object.stat().st_size
-            print(f'{"[INFO]":<10} File MD5 Hash Calculated: "{upload_file_hash_value}"')
-            print(f'{"[INFO]":<10} File Size Calculated: {upload_file_size} bytes')
         except Exception as error:
             return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '10', 'message': str(error)}
 
-        # Upload File To Azure BLOB:S11
+        # Calculate Uploaded File MD5 Hash And Size:S11
+        try:
+            with open(upload_file_path_object, 'rb') as local_file_data:
+                while chunk := local_file_data.read(4 * 1024 * 1024):
+                    hashlib.md5().update(chunk)
+            upload_file_hash_bytes = hashlib.md5().digest()
+            upload_file_size = upload_file_path_object.stat().st_size
+            print(f'{"[INFO]":<10} File MD5 Hash Calculated: "{hashlib.md5().digest().hex()}"')
+            print(f'{"[INFO]":<10} File Size Calculated: {upload_file_size} bytes')
+        except Exception as error:
+            return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '11', 'message': str(error)}
+
+        # Upload File To Azure BLOB:S12
         try:
             if upload_file_path_object.name == 'FileHashDetails.json':
                 upload_file_blob_client = blob_container_client.get_blob_client(upload_file_path_object.name)
@@ -162,19 +166,19 @@ def blob_files_operation(operation: str, env_file_path: str, files_delta_store_f
                 )
             print(f'{"[INFO]":<10} File Uploaded To BLOB: "{Path(upload_file_blob_client.blob_name).name}"')
         except Exception as error:
-            return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '11', 'message': str(error)}
-
-        # Verify Uploaded File Size And MD5:S12
-        try:
-            blob_properties = upload_file_blob_client.get_blob_properties()
-            if (upload_file_size == blob_properties.size) and (upload_file_hash_bytes == blob_properties.content_settings.content_md5):
-                print(f'{"[INFO]":<10} Uploaded File Size And MD5 Verified Successfully')
-                return {'status': 'SUCCESS', 'script_name': 'BLOB-Files-Operation', 'step': '12', 'message': 'File Uploaded And Verified Successfully'}
-            else:
-                return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '12', 'message': 'Uploaded File Size Or MD5 Verification Failed'}
-        except Exception as error:
             return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '12', 'message': str(error)}
 
+        # Verify Uploaded File Size And MD5:S13
+        try:
+            if (upload_file_size == upload_file_blob_client.get_blob_properties().size) and (upload_file_hash_bytes == upload_file_blob_client.get_blob_properties().content_settings.content_md5):
+                print(f'{"[INFO]":<10} Uploaded File Size And MD5 Verified Successfully')
+                return {'status': 'SUCCESS', 'script_name': 'BLOB-Files-Operation', 'step': '13', 'message': 'File Uploaded And Verified Successfully'}
+            else:
+                return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '13', 'message': 'Uploaded File Size Or MD5 Verification Failed'}
+        except Exception as error:
+            return {'status': 'ERROR', 'script_name': 'BLOB-Files-Operation', 'step': '13', 'message': str(error)}
+
+    # Execute "clear" Operation
     elif operation == 'clear':
         # Delete All Existing BLOBs From Container:S13
         try:
