@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![Azure](https://img.shields.io/badge/Azure-Blob%20Storage-0089D6?logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com/en-us/services/storage/blobs/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-8A2BE2)](https://github.com/astral-sh/uv)
-[![Status](https://img.shields.io/badge/status-WIP-yellow.svg)](./README.md)
+[![Status](https://img.shields.io/badge/status-beta-green.svg)](./README.md)
 
 > **Intelligent file-delta detection and bidirectional Azure Blob Storage synchronization for codebases.**
 
@@ -19,6 +19,7 @@
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [Quick Start](#quick-start)
 - [Usage](#usage)
   - [A) Rebase Files Details](#a-rebase-files-details)
   - [B) Upload Files Delta](#b-upload-files-delta)
@@ -122,7 +123,7 @@ Modern development workflows often require syncing large codebases across distri
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/File-Delta-To-BLOB.git
+git clone <repository-url>
 cd File-Delta-To-BLOB
 
 # Create virtual environment and install dependencies
@@ -154,7 +155,7 @@ BLOB_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=your_account;
 BLOB_CONTAINER_NAME="your-container-name"
 ```
 
-> ⚠️ **Security Note:** Never commit your `.env` file or real connection strings to version control. The included `.gitignore` already excludes `.env` and all runtime artifacts (`database/`, `FilesDeltaStore/`, `FileHashDetails.json`).
+> ⚠️ **Security Note:** Never commit your `.env` file or real connection strings to version control. The included `.gitignore` excludes `.env` and all runtime artifacts (`database/`, `FilesDeltaStore/`, `FileHashDetails.json`).
 
 ### Important: Source Folder Path
 
@@ -165,6 +166,23 @@ analysis_engine_folder_path = Path('/home/soumalya/Desktop/Office-Work/Analytics
 ```
 
 You **must** change this to point to your own target directory before running the tool.
+
+---
+
+## Quick Start
+
+After installation and [configuration](#configuration), run the tool:
+
+```bash
+python main.py
+```
+
+**Typical first-time workflow:**
+
+1. Choose **A) Rebase Files Details** — scans your source directory, builds the local database, and pushes the initial snapshot to Azure Blob.
+2. Make changes to your source code.
+3. Choose **B) Upload Files Delta** — only the changed files are uploaded.
+4. On another machine, choose **C) Download Files Delta** — pulls down the latest changes and applies them locally.
 
 ---
 
