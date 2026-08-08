@@ -5,6 +5,8 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         from pathlib import Path
         import shutil
         import json
+        import hashlib
+        from datetime import datetime
         from supportscript.blobfilesoperation import blob_files_operation
         from supportscript.localfileprocess import local_file_process
     except Exception as error:
@@ -156,3 +158,41 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         print(f'{"[INFO]":<10} All Deleted Files Processed Successfully: Total="{len(delete_files_details)}"')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '11', 'message': str(error)}
+
+    # Collect All Files From Analysis Engine:S12
+    try:
+        analysis_engine_files_path_list = []
+        exclude_folder_list = ['node_modules', '__pycache__', '.git', '.venv']
+        exclude_file_list = ['package-lock.json', '.gitattributes', '.gitignore', '.python-version', '.env', 'uv.lock']
+        analysis_engine_folder_path_object = Path(analysis_engine_folder_path)
+        if analysis_engine_folder_path_object.exists() and analysis_engine_folder_path_object.is_dir():
+            for file_path in analysis_engine_folder_path_object.rglob('*'):
+                if any(exclude_folder in file_path.parts for exclude_folder in exclude_folder_list):
+                    continue
+                if file_path.is_file() and file_path.name in exclude_file_list:
+                    continue
+                if file_path.is_file():
+                    analysis_engine_files_path_list.append(file_path)
+            print(f'{"[INFO]":<10} Total Files Collected From Source Folder: {len(analysis_engine_files_path_list)}')
+        else:
+            return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '12', 'message': 'Analysis Engine Folder Does Not Exist Or Is Not Directory'}
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '12', 'message': str(error)}
+
+    # Calculate MD5 Hash For All Collected Files:S13
+    try:
+        current_file_hash_details_dict = {}
+        for file_path in analysis_engine_files_path_list:
+            md5_hash = hashlib.md5()
+            with open(file_path, 'rb') as file:
+                while chunk := file.read(4 * 1024 * 1024):
+                    md5_hash.update(chunk)
+            current_file_hash_details_dict[str(file_path.relative_to(analysis_engine_folder_path_object))] = {
+                'file_hash_value': md5_hash.hexdigest(),
+                'file_size_in_bytes': file_path.stat().st_size,
+                'file_uploaded_at': (timestamp := datetime.now().isoformat()),
+                'file_updated_at': timestamp
+            }
+        print(f'{"[INFO]":<10} Total MD5 Hashes Calculated: {len(current_file_hash_details_dict)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '13', 'message': str(error)}
