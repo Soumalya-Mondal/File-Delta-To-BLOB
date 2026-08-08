@@ -138,6 +138,15 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e "."
 ```
 
+### Dependencies
+
+The following packages are required (defined in `pyproject.toml`):
+
+| Package | Version |
+|---------|---------|
+| `azure-storage-blob` | `>=12.30.0` |
+| `python-dotenv` | `>=1.2.2` |
+
 ---
 
 ## Configuration
@@ -155,7 +164,9 @@ BLOB_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=your_account;
 BLOB_CONTAINER_NAME="your-container-name"
 ```
 
-> ⚠️ **Security Note:** Never commit your `.env` file or real connection strings to version control. The included `.gitignore` excludes `.env` and all runtime artifacts (`database/`, `FilesDeltaStore/`, `FileHashDetails.json`).
+> ⚠️ **Security Note:** Never commit your `.env` file or real connection strings to version control. The included `.gitignore` excludes `.env`, `.venv`, and Python build artifacts (`__pycache__/`, `build/`, `dist/`, etc.).
+>
+> ⚠️ **Important:** Runtime artifacts (`database/`, `FilesDeltaStore/`, `FileHashDetails.json`) are **not** currently excluded by `.gitignore` — take care not to commit them to version control.
 
 ### Important: Source Folder Path
 
@@ -264,6 +275,7 @@ Please Enter Your Choice:
    - **Add** — copies new files from `FilesDeltaStore/` to the analysis engine (verifies size + MD5 after copy).
    - **Modified** — deletes the old local file, then copies the new version from `FilesDeltaStore/` (verifies size + MD5).
    - **Delete** — removes the file from the local analysis engine.
+7. **Re-verifies integrity:** Re-scans the entire analysis engine directory, recomputes every file's MD5 hash, and cross-references it against the downloaded snapshot to guarantee 100% consistency before updating the local database and JSON snapshot.
 
 **When to use:**
 - Setting up a new workstation with the latest codebase state.
@@ -367,7 +379,7 @@ Remote Blob Snapshot            Local Snapshot
 ### Integrity Guarantees
 
 - **Upload:** The `Content-MD5` header is set on every blob. After upload, the tool queries blob properties and ensures the remote MD5 matches the local MD5.
-- **Download:** After downloading from Blob, the tool re-computes the local MD5 and compares it to the blob's recorded `Content-MD5`.
+- **Download:** After downloading from Blob, the tool re-computes the local MD5 and compares it to the blob's recorded `Content-MD5`. After applying changes locally, it performs a full re-scan of the analysis engine and cross-references every file against the blob snapshot to ensure complete consistency.
 - **Local Apply:** After copying a downloaded file into the analysis engine, the tool verifies both file size and MD5 hash match the source in `FilesDeltaStore/`.
 
 ### Blob Path Conventions
@@ -415,13 +427,16 @@ The following behaviors are present in the current codebase and should be unders
 1. **Hardcoded source path**  
    `analysis_engine_folder_path` is hardcoded as an absolute path in `main.py` (line 34). You must edit the source code to point to your own directory.
 
-2. **Container-wide deletion on rebase**  
-   `rebasefilesdetails.py` clears **all** files from the Azure Blob container during a rebase. While the upload flow now clears the container once before re-uploading deltas, a rebase is still inherently destructive to remote state.
+2. **Container-wide deletion on rebase & upload**  
+   Both `rebasefilesdetails.py` and `uploadfilesdelta.py` clear **all** files from the Azure Blob container (including `FileHashDetails.json`) before uploading new state. A rebase is inherently destructive to remote state, and uploads replace the entire container contents.
 
 3. **No formal CLI framework**  
    The tool relies on interactive `input()` rather than command-line arguments, making it unsuitable for non-interactive automation (e.g., cron, CI/CD) without piping input.
 
-4. **No unit or integration tests**  
+4. **Strict local verification gap**  
+   `localfileprocess.py` checks copied files using `and` rather than `or` — a verification failure is only raised if **both** size and MD5 differ simultaneously. If a file changes content while retaining the same size (or vice versa), the mismatch can go undetected.
+
+5. **No unit or integration tests**  
    There are currently no automated tests. Validation is entirely manual.
 
 ---
