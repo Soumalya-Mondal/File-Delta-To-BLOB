@@ -6,6 +6,7 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         import shutil
         import json
         import hashlib
+        import sqlite3
         from datetime import datetime
         from supportscript.blobfilesoperation import blob_files_operation
         from supportscript.localfileprocess import local_file_process
@@ -81,18 +82,19 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
             if local_file_details is None:
                 # File exists in BLOB but not in local -> Add
                 add_files_details[file_path] = dict(blob_file_details)
-                add_files_details[file_path]['file_status'] = 'Add'
+                add_files_details[file_path]['file_status'] = 'Added'
             else:
                 # File exists in both -> check if hash changed
                 if blob_file_details.get('file_hash_value') != local_file_details.get('file_hash_value'):
                     modified_files_details[file_path] = dict(blob_file_details)
                     modified_files_details[file_path]['file_status'] = 'Modified'
+                    modified_files_details[file_path]['file_uploaded_at'] = local_file_details.get('file_uploaded_at', blob_file_details.get('file_uploaded_at'))
 
         # Identify Deleted Files From Local (not in BLOB)
         for file_path, local_file_details in local_file_hash_details_json_object.items():
             if file_path not in blob_file_hash_details_json_object:
                 delete_files_details[file_path] = dict(local_file_details)
-                delete_files_details[file_path]['file_status'] = 'Delete'
+                delete_files_details[file_path]['file_status'] = 'Deleted'
 
         print(f'{"[INFO]":<10} Total Added Files Details Created: {len(add_files_details)}')
         print(f'{"[INFO]":<10} Total Modified Files Details Created: {len(modified_files_details)}')
@@ -196,3 +198,135 @@ def download_files_delta(env_file_path: str, database_file_path: str, json_dump_
         print(f'{"[INFO]":<10} Total MD5 Hashes Calculated: {len(current_file_hash_details_dict)}')
     except Exception as error:
         return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '13', 'message': str(error)}
+
+    # Compare BLOB File Hash Details With Current Analysis Engine File Hash Details And Initialize Updated Local Dictionary:S14
+    try:
+        updated_local_file_hash_details_dict = dict(local_file_hash_details_json_object)
+
+        for file_path, blob_file_details in blob_file_hash_details_json_object.items():
+            current_file_details = current_file_hash_details_dict.get(file_path)
+            if current_file_details is None:
+                return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '14', 'message': f'File Present In BLOB But Missing In Analysis Engine: "{Path(file_path).name}"'}
+            if blob_file_details.get('file_hash_value') != current_file_details.get('file_hash_value'):
+                return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '14', 'message': f'File Hash Mismatch Detected For File: "{Path(file_path).name}" BLOB="{blob_file_details.get("file_hash_value")}" Local="{current_file_details.get("file_hash_value")}"'}
+
+        for file_path, current_file_details in current_file_hash_details_dict.items():
+            if file_path not in blob_file_hash_details_json_object:
+                return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '14', 'message': f'File Present In Analysis Engine But Missing In BLOB: "{Path(file_path).name}"'}
+
+        print(f'{"[INFO]":<10} BLOB File Hash Details Verified Against Analysis Engine Files Successfully')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '14', 'message': str(error)}
+
+    # Update Added File Details In Local JSON:S15
+    try:
+        for file_path, file_details in add_files_details.items():
+            updated_local_file_hash_details_dict[file_path] = {
+                'file_hash_value': file_details['file_hash_value'],
+                'file_size_in_bytes': file_details['file_size_in_bytes'],
+                'file_status': 'Added',
+                'file_uploaded_at': file_details['file_uploaded_at'],
+                'file_updated_at': file_details['file_updated_at']
+            }
+        print(f'{"[INFO]":<10} Total Added File Details Updated In JSON Dump File: {len(add_files_details)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '15', 'message': str(error)}
+
+    # Update Modified File Details In Local JSON:S16
+    try:
+        for file_path, file_details in modified_files_details.items():
+            old_local_file_details = local_file_hash_details_json_object.get(file_path, {})
+            updated_local_file_hash_details_dict[file_path] = {
+                'file_hash_value': file_details['file_hash_value'],
+                'file_size_in_bytes': file_details['file_size_in_bytes'],
+                'file_status': 'Modified',
+                'file_uploaded_at': old_local_file_details.get('file_uploaded_at', file_details['file_uploaded_at']),
+                'file_updated_at': file_details['file_updated_at']
+            }
+        print(f'{"[INFO]":<10} Total Modified File Details Updated In JSON Dump File: {len(modified_files_details)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '16', 'message': str(error)}
+
+    # Update Deleted File Details In Local JSON:S17
+    try:
+        for file_path, file_details in delete_files_details.items():
+            updated_local_file_hash_details_dict[file_path] = {
+                'file_hash_value': file_details['file_hash_value'],
+                'file_size_in_bytes': file_details['file_size_in_bytes'],
+                'file_status': 'Deleted',
+                'file_uploaded_at': file_details['file_uploaded_at'],
+                'file_updated_at': file_details['file_updated_at']
+            }
+        print(f'{"[INFO]":<10} Total Deleted File Details Updated In JSON Dump File: {len(delete_files_details)}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '17', 'message': str(error)}
+
+    # Write Updated File Hash Details To Local JSON:S18
+    try:
+        with open(json_dump_file_path, 'w', encoding = 'utf-8') as json_file:
+            json.dump(updated_local_file_hash_details_dict, json_file, indent = 2)
+        print(f'{"[INFO]":<10} Local File Hash Details JSON Updated Successfully: "{Path(json_dump_file_path).name}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '18', 'message': str(error)}
+
+    # Insert Or Update Added File Details Into Database:S19
+    try:
+        database_connection = sqlite3.connect(str(database_file_path))
+        database_cursor = database_connection.cursor()
+        total_added_upserted = 0
+        for file_path, file_hash_details in add_files_details.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_added_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Added File Details Upserted Into Database: {total_added_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '19', 'message': str(error)}
+
+    # Insert Or Update Modified File Details Into Database:S20
+    try:
+        database_connection = sqlite3.connect(str(database_file_path))
+        database_cursor = database_connection.cursor()
+        total_modified_upserted = 0
+        for file_path, file_hash_details in modified_files_details.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_modified_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Modified File Details Upserted Into Database: {total_modified_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '20', 'message': str(error)}
+
+    # Insert Or Update Deleted File Details Into Database:S21
+    try:
+        database_connection = sqlite3.connect(str(database_file_path))
+        database_cursor = database_connection.cursor()
+        total_deleted_upserted = 0
+        for file_path, file_hash_details in delete_files_details.items():
+            database_cursor.execute('''
+                INSERT OR REPLACE INTO analysis_file_hash (file_uploaded_at, file_path, file_md5_hash, file_size_in_bytes, file_status, file_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (file_hash_details['file_uploaded_at'], file_path, file_hash_details['file_hash_value'], file_hash_details['file_size_in_bytes'], file_hash_details['file_status'], file_hash_details['file_updated_at']))
+            total_deleted_upserted += 1
+        database_connection.commit()
+        database_connection.close()
+        print(f'{"[INFO]":<10} Total Deleted File Details Upserted Into Database: {total_deleted_upserted}')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '21', 'message': str(error)}
+
+    # Clear FilesDelta Store Folder:S22
+    try:
+        if files_delta_store_folder_path_object.exists():
+            shutil.rmtree(str(files_delta_store_folder_path_object))
+        files_delta_store_folder_path_object.mkdir(parents = True, exist_ok = True)
+        print(f'{"[INFO]":<10} FilesDelta Store Folder Cleared: "{files_delta_store_folder_path_object.name}"')
+    except Exception as error:
+        return {'status': 'ERROR', 'script_name': 'Download-Files-Delta', 'step': '22', 'message': str(error)}
+
+    return {'status': 'SUCCESS', 'script_name': 'Download-Files-Delta', 'step': '22', 'message': 'Download Files Delta Completed Successfully'}
